@@ -1,58 +1,20 @@
-type transfer =
-  [@layout:comb]
-  { [@annot:from] address_from : address;
-    [@annot:to] address_to : address;
-    value : nat }
+(** 
+   This file implement the FA12 for single asset on Tezos
+*)
 
-type approve =
-  [@layout:comb]
-  { spender : address;
-    value : nat }
+#import "fa12_storage.mligo" "S"
+#import "fa12_types.mligo" "T"
 
-type allowance_key =
-  [@layout:comb]
-  { owner : address;
-    spender : address }
-
-type getAllowance =
-  [@layout:comb]
-  { request : allowance_key;
-    callback : nat contract }
-
-type getBalance =
-  [@layout:comb]
-  { owner : address;
-    callback : nat contract }
-
-type getTotalSupply =
-  [@layout:comb]
-  { request : unit ;
-    callback : nat contract }
-
-type ledger = (address, nat) big_map
-type allowances = (allowance_key, nat) big_map
-
-type token_metadata_entry = {
-  token_id: nat;
-  token_info: (string, bytes) map;
-}
-type storage =
-  [@layout:comb]
-  { ledger : ledger;
-    allowances : allowances;
-    admin : address;
-    total_supply : nat;
-    token_metadata : (nat, token_metadata_entry) big_map
-  }
+type storage = S.Storage.t
 
 type parameter =
-  | Transfer of transfer
-  | Approve of approve
-  | GetAllowance of getAllowance
-  | GetBalance of getBalance
-  | GetTotalSupply of getTotalSupply
+  | Transfer of T.transfer
+  | Approve of T.approve
+  | GetAllowance of T.getAllowance
+  | GetBalance of T.getBalance
+  | GetTotalSupply of T.getTotalSupply
 
-type result = operation list * storage
+type result = operation list * S.storage
 
 [@inline]
 let maybe (n : nat) : nat option =
@@ -60,7 +22,7 @@ let maybe (n : nat) : nat option =
   then (None : nat option)
   else Some n
 
-let transfer (param : transfer) (storage : storage) : result =
+let transfer (param : T.transfer) (storage : storage) : result =
 
   let allowances = storage.allowances in
   let ledger = storage.ledger in
@@ -93,7 +55,7 @@ let transfer (param : transfer) (storage : storage) : result =
       | Some from_balance -> from_balance in
     Big_map.update param.address_from (maybe from_balance) ledger in
 
-  // 
+  // Find receiver and send update the ledger
   let ledger =
     let to_balance =
       match Big_map.find_opt param.address_to ledger with
@@ -104,7 +66,7 @@ let transfer (param : transfer) (storage : storage) : result =
     Big_map.update param.address_to to_balance ledger in
     (([] : operation list), { storage with ledger = ledger; allowances = allowances })    
 
-let approve (param : approve) (storage : storage) : result =
+let approve (param : T.approve) (storage : storage) : result =
   let allowances = storage.allowances in
   let allowance_key = { owner = Tezos.sender ; spender = param.spender } in
   let previous_value =
@@ -119,30 +81,30 @@ let approve (param : approve) (storage : storage) : result =
     (([] : operation list), { storage with allowances = allowances })
   end
 
-let getAllowance (param : getAllowance) (storage : storage) : operation list =
+let getAllowance (param : T.getAllowance) (storage : storage) : operation list =
   let value =
     match Big_map.find_opt param.request storage.allowances with
     | Some value -> value
     | None -> 0n in
   [Tezos.transaction value 0mutez param.callback]
 
-let getBalance (param : getBalance) (storage : storage) : operation list =
+let getBalance (param : T.getBalance) (storage : storage) : operation list =
   let value =
     match Big_map.find_opt param.owner storage.ledger with
     | Some value -> value
     | None -> 0n in
   [Tezos.transaction value 0mutez param.callback]
 
-let getTotalSupply (param : getTotalSupply) (storage : storage) : operation list =
+let getTotalSupply (param : T.getTotalSupply) (storage : storage) : operation list =
   let total = storage.total_supply in
   [Tezos.transaction total 0mutez param.callback]
 
 let main (param, storage : parameter * storage) : result =
   begin
     match param with
-    | Transfer param -> transfer param storage
-    | Approve param -> approve param storage
-    | GetAllowance param -> (getAllowance param storage, storage)
-    | GetBalance param -> (getBalance param storage, storage)
+    | Transfer param       ->  transfer param storage
+    | Approve param        ->  approve param storage
+    | GetAllowance param   -> (getAllowance param storage, storage)
+    | GetBalance param     -> (getBalance param storage, storage)
     | GetTotalSupply param -> (getTotalSupply param storage, storage)
   end

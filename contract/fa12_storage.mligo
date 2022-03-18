@@ -1,4 +1,5 @@
 // A proxy contract for storage that allows for storage upgrades 
+#import "fa12_types.mligo" "T"
 
 // TODO : 
 //  - composable storage that allows you to migrate storage over time. 
@@ -16,27 +17,31 @@
  * Storage
  * ============================================================================= *)
 
+module Storage = struct
+  type token_id = nat
+  type t = {
+    ledger : T.ledger;
+    allowances : T.allowances;
+    admin : address;
+    total_supply : nat;
+    token_metadata : (nat, T.token_metadata_entry) big_map;
+  }
+end
 
-type storage = {
-    // storage here 
-}
+type storage = Storage.t
 
-
-type result = operation list * storage 
+type result = operation list * storage
 
 
 (* =============================================================================
  * Entrypoint Type Definition
  * ============================================================================= *)
 
-type entrypoint = 
-| // entrypoints here 
 
 (* =============================================================================
  * Error Codes
  * ============================================================================= *)
 
-let error_PERMISSIONS_DENIED = 0n
 
 (* =============================================================================
  * Aux Functions
@@ -60,9 +65,5 @@ let error_PERMISSIONS_DENIED = 0n
 (* =============================================================================
  * Main Function
  * ============================================================================= *)
-
-let main (param, storage : entrypoint * storage) : result = 
-    match param with 
-    | // entrypoints 
 
 
