@@ -7,17 +7,34 @@
                 (pair %get_total_supply (contract %callback nat) (unit %request))))
         (pair %transfer (pair (address %address_from) (address %address_to)) (nat %value))) ;
   storage
-    (pair (pair (big_map %allowances (pair (address %owner) (address %spender)) nat)
-                (big_map %ledger address nat))
-          (pair (big_map %token_metadata nat (pair (nat %token_id) (map %token_info string bytes)))
-                (nat %total_supply))) ;
-  code { UNPAIR ;
+    (pair (pair (pair (big_map %allowances (pair (address %owner) (address %spender)) nat)
+                      (big_map %ledger address nat))
+                (pair (big_map %token_metadata nat (pair (nat %token_id) (map %token_info string bytes)))
+                      (nat %total_supply)))
+          (pair %tzip18
+             (pair (pair (option %contract_next address) (address %contract_old))
+                   (pair (bool %is_in_use) (address %master_proxy)))
+             (pair (pair (nat %version_current) (option %version_next nat))
+                   (option %version_old nat)))) ;
+  code { LAMBDA
+           nat
+           (option nat)
+           { PUSH nat 0 ;
+             SWAP ;
+             DUP ;
+             DUG 2 ;
+             COMPARE ;
+             EQ ;
+             IF { DROP ; NONE nat } { SOME } } ;
+         SWAP ;
+         UNPAIR ;
          IF_LEFT
            { IF_LEFT
                { IF_LEFT
                    { SWAP ;
                      DUP ;
                      DUG 2 ;
+                     CAR ;
                      CAR ;
                      CAR ;
                      SWAP ;
@@ -40,28 +57,34 @@
                      GT ;
                      AND ;
                      IF { PUSH string "UnsafeAllowanceChange" ; FAILWITH } {} ;
-                     DUP 4 ;
+                     SWAP ;
+                     DIG 2 ;
                      CDR ;
                      DIG 4 ;
-                     CAR ;
-                     CDR ;
-                     DIG 3 ;
-                     DIG 4 ;
-                     CDR ;
-                     PUSH nat 0 ;
+                     SWAP ;
+                     EXEC ;
+                     DIG 2 ;
+                     UPDATE ;
                      SWAP ;
                      DUP ;
                      DUG 2 ;
-                     COMPARE ;
-                     EQ ;
-                     IF { DROP ; NONE nat } { SOME } ;
-                     DIG 4 ;
-                     UPDATE ;
+                     CDR ;
+                     DUP 3 ;
+                     CAR ;
+                     CDR ;
+                     DIG 3 ;
+                     CAR ;
+                     CAR ;
+                     CDR ;
+                     DIG 3 ;
+                     PAIR ;
                      PAIR ;
                      PAIR ;
                      NIL operation ;
                      PAIR }
-                   { SWAP ;
+                   { DIG 2 ;
+                     DROP ;
+                     SWAP ;
                      DUP ;
                      DUG 2 ;
                      NIL operation ;
@@ -69,6 +92,7 @@
                      CAR ;
                      PUSH mutez 0 ;
                      DIG 5 ;
+                     CAR ;
                      CAR ;
                      CAR ;
                      DIG 5 ;
@@ -78,7 +102,9 @@
                      TRANSFER_TOKENS ;
                      CONS ;
                      PAIR } }
-               { IF_LEFT
+               { DIG 2 ;
+                 DROP ;
+                 IF_LEFT
                    { SWAP ;
                      DUP ;
                      DUG 2 ;
@@ -87,6 +113,7 @@
                      CAR ;
                      PUSH mutez 0 ;
                      DIG 5 ;
+                     CAR ;
                      CAR ;
                      CDR ;
                      DIG 5 ;
@@ -104,6 +131,7 @@
                      CAR ;
                      PUSH mutez 0 ;
                      DIG 4 ;
+                     CAR ;
                      CDR ;
                      CDR ;
                      TRANSFER_TOKENS ;
@@ -114,7 +142,9 @@
              DUG 2 ;
              CAR ;
              CAR ;
+             CAR ;
              DUP 3 ;
+             CAR ;
              CAR ;
              CDR ;
              DUP 3 ;
@@ -139,11 +169,10 @@
                   ISNAT ;
                   IF_NONE { PUSH string "NotEnoughAllowance" ; FAILWITH } {} ;
                   DIG 3 ;
-                  PUSH nat 0 ;
-                  DUP 3 ;
-                  COMPARE ;
-                  EQ ;
-                  IF { SWAP ; DROP ; NONE nat } { SWAP ; SOME } ;
+                  SWAP ;
+                  DUP 7 ;
+                  SWAP ;
+                  EXEC ;
                   DIG 2 ;
                   UPDATE } ;
              DUP 3 ;
@@ -158,11 +187,10 @@
              ISNAT ;
              IF_NONE { PUSH string "NotEnoughBalance" ; FAILWITH } {} ;
              DIG 2 ;
-             PUSH nat 0 ;
-             DUP 3 ;
-             COMPARE ;
-             EQ ;
-             IF { SWAP ; DROP ; NONE nat } { SWAP ; SOME } ;
+             SWAP ;
+             DIG 5 ;
+             SWAP ;
+             EXEC ;
              DUP 4 ;
              CAR ;
              CAR ;
@@ -180,18 +208,36 @@
              ADD ;
              DUP 5 ;
              CDR ;
-             DUG 2 ;
+             DUP 6 ;
+             CAR ;
+             CDR ;
+             DIG 3 ;
+             DIG 3 ;
              SOME ;
-             DIG 4 ;
+             DIG 5 ;
              CAR ;
              CDR ;
              UPDATE ;
-             DIG 3 ;
+             DIG 4 ;
+             CAR ;
              CAR ;
              CAR ;
              PAIR ;
+             PAIR ;
+             PAIR ;
+             DUP ;
+             CDR ;
+             SWAP ;
+             DUP ;
+             DUG 2 ;
+             CAR ;
              CDR ;
              DIG 2 ;
+             CAR ;
+             CAR ;
+             CDR ;
+             DIG 3 ;
+             PAIR ;
              PAIR ;
              PAIR ;
              NIL operation ;

@@ -61,8 +61,8 @@ let get_total_supply (param : T.get_total_supply) (storage : storage) : operatio
   [Tezos.transaction total 0mutez param.callback]
 
 type parameter =
-  | Transfer of T.transfer
-  | Balance_of of T.balance_of
+  | Transfer         of T.transfer
+  | Balance_of       of T.balance_of
   | Update_operators of T.update_operators
   | Get_total_supply of T.get_total_supply
 

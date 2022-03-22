@@ -1,3 +1,13 @@
+type tzip18 = {
+  master_proxy : address;
+  contract_old : address;
+  version_old : nat;
+  version_current : nat;
+  contract_next : address;
+  version_next : nat option;
+  is_in_use : bool;
+}
+
 module Ledger = struct
    type owner  = address
    type amount_ = nat

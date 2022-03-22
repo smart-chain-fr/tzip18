@@ -1,6 +1,19 @@
+type tzip18 = {
+  master_proxy : address;
+  contract_old : address;
+  version_old : nat option;
+  version_current : nat;
+  contract_next : address option;
+  version_next : nat option;
+  is_in_use : bool;
+}
 
 
-type ledger = (address, nat) big_map
+module Ledger  = struct
+  type owner   = address
+  type amount_ = nat
+  type t = (owner, amount_) big_map
+end
 
 type token_metadata_entry = { 
     token_id: nat; 

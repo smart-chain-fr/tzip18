@@ -9,9 +9,13 @@
                (or (pair %add_operator (address %owner) (address %operator) (nat %token_id))
                    (pair %remove_operator (address %owner) (address %operator) (nat %token_id)))))) ;
   storage
-    (pair (pair (big_map %ledger address nat) (big_map %operators address (set address)))
-          (pair (pair %token_metadata (nat %token_id) (map %token_info string bytes))
-                (nat %total_supply))) ;
+    (pair (pair (pair (big_map %ledger address nat) (big_map %operators address (set address)))
+                (pair (pair %token_metadata (nat %token_id) (map %token_info string bytes))
+                      (nat %total_supply)))
+          (pair %tzip18
+             (pair (pair (address %contract_next) (address %contract_old))
+                   (pair (bool %is_in_use) (address %master_proxy)))
+             (pair (pair (nat %version_current) (option %version_next nat)) (nat %version_old)))) ;
   code { LAMBDA
            (pair (big_map address nat) address)
            nat
@@ -38,7 +42,7 @@
              IF_LEFT
                { UNPAIR ;
                  SWAP ;
-                 MAP { DUP ; CAR ; DUP 4 ; CAR ; CAR ; PAIR ; DUP 5 ; SWAP ; EXEC ; PAIR } ;
+                 MAP { DUP ; CAR ; DUP 4 ; CAR ; CAR ; CAR ; PAIR ; DUP 5 ; SWAP ; EXEC ; PAIR } ;
                  DIG 3 ;
                  DROP ;
                  SWAP ;
@@ -60,6 +64,7 @@
                  CAR ;
                  PUSH mutez 0 ;
                  DIG 4 ;
+                 CAR ;
                  CDR ;
                  CDR ;
                  TRANSFER_TOKENS ;
@@ -71,6 +76,7 @@
                  SWAP ;
                  DUP ;
                  DUG 2 ;
+                 CAR ;
                  CAR ;
                  CAR ;
                  SWAP ;
@@ -86,6 +92,7 @@
                                EQ ;
                                IF { DROP ; UNIT }
                                   { DUP 6 ;
+                                    CAR ;
                                     CAR ;
                                     CDR ;
                                     DUP 6 ;
@@ -143,10 +150,15 @@
                  DUP ;
                  DUG 2 ;
                  CDR ;
-                 DIG 2 ;
+                 DUP 3 ;
                  CAR ;
                  CDR ;
-                 DIG 2 ;
+                 DIG 3 ;
+                 CAR ;
+                 CAR ;
+                 CDR ;
+                 DIG 3 ;
+                 PAIR ;
                  PAIR ;
                  PAIR ;
                  NIL operation ;
@@ -157,6 +169,7 @@
                  SWAP ;
                  DUP ;
                  DUG 2 ;
+                 CAR ;
                  CAR ;
                  CDR ;
                  SWAP ;
@@ -233,10 +246,15 @@
                  DUP ;
                  DUG 2 ;
                  CDR ;
-                 SWAP ;
+                 DUP 3 ;
+                 CAR ;
+                 CDR ;
                  DIG 2 ;
+                 DIG 3 ;
                  CAR ;
                  CAR ;
+                 CAR ;
+                 PAIR ;
                  PAIR ;
                  PAIR ;
                  NIL operation ;

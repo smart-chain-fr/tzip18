@@ -21,26 +21,15 @@
  * ============================================================================= *)
 
 module Storage = struct
-  module Upgradable = struct
-    type master_proxy = address
-    type contract_old = address
-    type version_old = nat
-    type version_current = nat
-    type contract_next = address
-    type version_next = nat option
-    type is_in_use = bool
-  end
   type token_id = nat
   type t = {
+    tzip18 : T.tzip18;
     ledger : T.Ledger.t;
     token_metadata : T.token_metadata;
     total_supply : nat;
     operators : T.Operators.t;
   }
-
 end
-
-
 
 (* =============================================================================
  * Entrypoint Type Definition

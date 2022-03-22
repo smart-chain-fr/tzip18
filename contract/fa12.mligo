@@ -91,10 +91,10 @@ let get_total_supply (param : T.get_total_supply) (storage : storage) : operatio
   [Tezos.transaction total 0mutez param.callback]
 
 type parameter =
-  | Transfer of T.transfer
-  | Approve of T.approve
-  | Get_allowance of T.get_allowance
-  | Get_balance of T.get_balance
+  | Transfer         of T.transfer
+  | Approve          of T.approve
+  | Get_allowance    of T.get_allowance
+  | Get_balance      of T.get_balance
   | Get_total_supply of T.get_total_supply
 
 let main (p, s : parameter * storage) : operation list * storage = match p with
