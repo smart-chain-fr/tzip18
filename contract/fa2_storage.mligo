@@ -1,5 +1,5 @@
 // A proxy contract for storage that allows for storage upgrades 
-#import "fa12_types.mligo" "T"
+#import "fa2_types.mligo" "T"
 
 // TODO : 
 //  - composable storage that allows you to migrate storage over time. 
@@ -15,22 +15,31 @@
 
 (* =============================================================================
  * Storage
+ * 
+ * The module Storage must be initialized at origination with the old contract address
+ * old contract address
  * ============================================================================= *)
 
 module Storage = struct
+  module Upgradable = struct
+    type master_proxy = address
+    type contract_old = address
+    type version_old = nat
+    type version_current = nat
+    type contract_next = address
+    type version_next = nat option
+    type is_in_use = bool
+  end
   type token_id = nat
   type t = {
-    ledger : T.ledger;
-    allowances : T.allowances;
-    admin : address;
+    ledger : T.Ledger.t;
+    token_metadata : T.token_metadata;
     total_supply : nat;
-    token_metadata : (nat, T.token_metadata_entry) big_map;
+    operators : T.Operators.t;
   }
+
 end
 
-type storage = Storage.t
-
-type result = operation list * storage
 
 
 (* =============================================================================
@@ -61,6 +70,8 @@ type result = operation list * storage
 
 // expose all your big maps to a view
 // [@view] view1 (input : input) : output = ...
+
+
 
 (* =============================================================================
  * Main Function

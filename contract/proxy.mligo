@@ -1,109 +1,104 @@
-// A proxy contract for smart contract upgradeability 
-// This contract 
+(**
+ * This file implements the TZIP-18 proposal on Tezos
+ * https://tzip.tezosagora.org/proposal/tzip-18/
+ * 
+ * The design supports :
+ * - adding/removing entrypoints
+ * - changing an entrypoint's code and parameter type
+ * - changing the storage's content and type
+ * - contract address immutability
+*)
 
+(* =============================================================================
+ * Types Definition
+ * ============================================================================= *)
+
+type call_contract = { 
+  entrypoint_name : string; 
+  payload         : bytes;
+}
+
+type ep = {
+  addr       : address;
+  parameters : string;
+  is_view    : bool;
+}
+
+type update_ep = {
+  name        : string;
+  is_removed  : bool;
+  entrypoint  : ep option;
+}
+
+type token_metadata = {
+  token_id   : nat;
+  token_info : (string,bytes) map;
+}
 
 (* =============================================================================
  * Storage
  * ============================================================================= *)
-
-
 type storage = {
-    governance_proxy : address ;
-    entrypoints : (string, address) big_map ; 
-    entrypoint_metadata : (string, string) big_map ; 
+  governance_proxy : address ;
+  entrypoints : (string, ep) big_map; 
+  token_metadata : token_metadata ;
 }
-
-
-type result = operation list * storage 
-
-
-(* =============================================================================
- * Entrypoint Type Definition
- * ============================================================================= *)
-
-type call_contract = { entrypoint : string ; payload : bytes ; }
-type update_entrypoints = { 
-    new_entrypoint_name : string ; 
-    new_entrypoint_address : address option ; // none if removing an entrypoint 
-    new_entrypoint_type : string ; 
-}
-
-type entrypoint = 
-| CallContract of call_contract
-| UpdateEntrypoints of update_entrypoints list 
-
-(* =============================================================================
- * Error Codes
- * ============================================================================= *)
-
-let error_PERMISSIONS_DENIED = 0n 
-let error_NO_ENTRYPOINT_FOUND = 1n
-let error_NO_CONTRACT_FOUND = 2n
-
-(* =============================================================================
- * Aux Functions
- * ============================================================================= *)
-
 
 (* =============================================================================
  * Entrypoint Functions
  * ============================================================================= *)
 
 // the proxy function 
-let call_contract (param : call_contract) (storage : storage) : result = 
-    let op_call_contract = 
-        let amt = Tezos.amount in 
-        let entrypoint_address = 
-            match Big_map.find_opt param.entrypoint storage.entrypoints with 
-            | None -> (error_NO_ENTRYPOINT_FOUND : address)
-            | Some a -> a in 
-        let destination_contract = 
-            match (Tezos.get_contract_opt entrypoint_address : bytes contract option) with 
-            | None -> (error_NO_ENTRYPOINT_FOUND : bytes contract)
-            | Some c -> c in 
-        Tezos.transaction param.payload amt destination_contract in
-    [ op_call_contract ; ], storage 
+let call_contract (param : call_contract) (storage : storage) : operation list * storage = 
+  let op_call_contract : operation = 
+    let amt = Tezos.amount in 
+    let entry : ep = 
+      match Big_map.find_opt param.entrypoint_name storage.entrypoints with 
+      | None   -> (failwith "NO_ENTRYPOINT_FOUND" : ep)
+      | Some a -> a in
+    let destination_address = entry.addr in
+    let destination_contract = 
+      match (Tezos.get_contract_opt destination_address : bytes contract option) with 
+      | None   -> (failwith "NO_ENTRYPOINT_FOUND" : bytes contract)
+      | Some c -> c in 
+    Tezos.transaction param.payload amt destination_contract
+  in
+  ([op_call_contract] : operation list), storage
 
 // the governance proxy contract can update entrypoints 
-let update_entrypoints (param : update_entrypoints list) (storage : storage) : result = 
-    // check permissions 
-    if Tezos.sender <> storage.governance_proxy then (failwith error_PERMISSIONS_DENIED : result) else 
-    ([] : operation list),
-    { storage with 
-        entrypoints = 
-            List.fold 
-            (fun (param, storage : update_entrypoints * storage) : (string, address) big_map -> 
-                Big_map.update param.new_entrypoint_name param.new_entrypoint_address storage.entrypoints)
-            param 
-            storage ;
-        entrypoint_metadata = 
-            List.fold 
-            (fun (param, storage : update_entrypoints * storage) : (string, address) big_map -> 
-                Big_map.update param.new_entrypoint_name param.new_entrypoint_type storage.entrypoint_metadata)
-            param 
-            storage ; 
-    }
-
+let update_entrypoints (l : update_ep list) (s : storage) : operation list * storage = 
+  let () = assert_with_error (Tezos.sender = s.governance_proxy) "PERMISSIONS_DENIED" in
+  let rec update_storage ((l, m) : update_ep list * (string, ep) big_map) : (string, ep) big_map =
+    match l with
+    | []      -> m
+    | x :: xs ->
+      let b : (string, ep) big_map = match x.entrypoint with
+        | None     -> if x.is_removed then Big_map.remove x.name m else m
+        | Some _ep -> 
+          if not x.is_removed then match x.entrypoint with
+          | None   -> m
+          | Some c -> Big_map.update x.name (Some c) m
+          else m
+      in
+      update_storage (xs, b)
+  in
+  let new_entrypoints : (string, ep) big_map = update_storage (l, s.entrypoints) in
+  (([] : operation list), {s with entrypoints = new_entrypoints})
 
 (* =============================================================================
  * Contract Views
  * ============================================================================= *)
 
 // contract users can get the address through an on-chain view if they would rather 
-[@view] let get_entrypoint_address (entrypoint, storage : string * storage) : address = 
-    match Big_map.find_opt entrypoint storage.entrypoints with 
-    | None -> (failwith error_NO_ENTRYPOINT_FOUND : address)
-    | Some a -> a 
+// [@view] let get_entrypoint_address (entrypoint, storage : string * storage) : address = 
+//     match Big_map.find_opt entrypoint storage.entrypoints with 
+//     | None -> (failwith error_NO_ENTRYPOINT_FOUND : address)
+//     | Some a -> a 
 
-(* =============================================================================
- * Main Function
- * ============================================================================= *)
+type parameter = 
+  | CallContract of call_contract
+  | UpdateEntrypoints of update_ep list 
 
-let main (param, storage : entrypoint * storage) : result = 
-    match param with 
-    | CallContract p -> 
-        call_contract p storage 
-    | UpdateEntrypoints p ->
-        update_entrypoints p storage 
-
-
+let main (p, s : parameter * storage) : operation list * storage = match p with
+  | CallContract      p -> call_contract      p s
+  | UpdateEntrypoints p -> update_entrypoints p s

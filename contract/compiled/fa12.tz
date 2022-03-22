@@ -1,17 +1,16 @@
 { parameter
     (or (or (or (pair %approve (address %spender) (nat %value))
-                (pair %getAllowance
+                (pair %get_allowance
                    (contract %callback nat)
                    (pair %request (address %owner) (address %spender))))
-            (or (pair %getBalance (contract %callback nat) (address %owner))
-                (pair %getTotalSupply (contract %callback nat) (unit %request))))
+            (or (pair %get_balance (contract %callback nat) (address %owner))
+                (pair %get_total_supply (contract %callback nat) (unit %request))))
         (pair %transfer (pair (address %address_from) (address %address_to)) (nat %value))) ;
   storage
-    (pair (pair (pair (address %admin)
-                      (big_map %allowances (pair (address %owner) (address %spender)) nat))
-                (pair (big_map %ledger address nat)
-                      (big_map %token_metadata nat (pair (nat %token_id) (map %token_info string bytes)))))
-          (nat %total_supply)) ;
+    (pair (pair (big_map %allowances (pair (address %owner) (address %spender)) nat)
+                (big_map %ledger address nat))
+          (pair (big_map %token_metadata nat (pair (nat %token_id) (map %token_info string bytes)))
+                (nat %total_supply))) ;
   code { UNPAIR ;
          IF_LEFT
            { IF_LEFT
@@ -21,7 +20,6 @@
                      DUG 2 ;
                      CAR ;
                      CAR ;
-                     CDR ;
                      SWAP ;
                      DUP ;
                      DUG 2 ;
@@ -44,7 +42,7 @@
                      IF { PUSH string "UnsafeAllowanceChange" ; FAILWITH } {} ;
                      DUP 4 ;
                      CDR ;
-                     DUP 5 ;
+                     DIG 4 ;
                      CAR ;
                      CDR ;
                      DIG 3 ;
@@ -59,11 +57,6 @@
                      IF { DROP ; NONE nat } { SOME } ;
                      DIG 4 ;
                      UPDATE ;
-                     DIG 3 ;
-                     CAR ;
-                     CAR ;
-                     CAR ;
-                     PAIR ;
                      PAIR ;
                      PAIR ;
                      NIL operation ;
@@ -78,7 +71,6 @@
                      DIG 5 ;
                      CAR ;
                      CAR ;
-                     CDR ;
                      DIG 5 ;
                      CDR ;
                      GET ;
@@ -97,7 +89,6 @@
                      DIG 5 ;
                      CAR ;
                      CDR ;
-                     CAR ;
                      DIG 5 ;
                      CDR ;
                      GET ;
@@ -114,6 +105,7 @@
                      PUSH mutez 0 ;
                      DIG 4 ;
                      CDR ;
+                     CDR ;
                      TRANSFER_TOKENS ;
                      CONS ;
                      PAIR } } }
@@ -122,11 +114,9 @@
              DUG 2 ;
              CAR ;
              CAR ;
-             CDR ;
              DUP 3 ;
              CAR ;
              CDR ;
-             CAR ;
              DUP 3 ;
              CAR ;
              CAR ;
@@ -190,36 +180,18 @@
              ADD ;
              DUP 5 ;
              CDR ;
-             DUP 6 ;
-             CAR ;
-             CDR ;
-             CDR ;
-             DIG 3 ;
-             DIG 3 ;
+             DUG 2 ;
              SOME ;
-             DIG 5 ;
+             DIG 4 ;
              CAR ;
              CDR ;
              UPDATE ;
-             PAIR ;
              DIG 3 ;
              CAR ;
              CAR ;
              PAIR ;
-             PAIR ;
-             DUP ;
              CDR ;
-             SWAP ;
-             DUP ;
-             DUG 2 ;
-             CAR ;
-             CDR ;
-             DIG 3 ;
-             DIG 3 ;
-             CAR ;
-             CAR ;
-             CAR ;
-             PAIR ;
+             DIG 2 ;
              PAIR ;
              PAIR ;
              NIL operation ;

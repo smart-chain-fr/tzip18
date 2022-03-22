@@ -1,5 +1,6 @@
-(** 
-   This file implement the FA12 for single asset on Tezos
+(**
+ * This file implements the TZIP-7 proposal for FA12 single asset on Tezos
+ * https://tzip.tezosagora.org/proposal/tzip-7/
 *)
 
 #import "fa12_storage.mligo" "S"
@@ -7,22 +8,12 @@
 
 type storage = S.Storage.t
 
-type parameter =
-  | Transfer of T.transfer
-  | Approve of T.approve
-  | GetAllowance of T.getAllowance
-  | GetBalance of T.getBalance
-  | GetTotalSupply of T.getTotalSupply
-
-type result = operation list * S.storage
-
-[@inline]
 let maybe (n : nat) : nat option =
   if n = 0n
   then (None : nat option)
   else Some n
 
-let transfer (param : T.transfer) (storage : storage) : result =
+let transfer (param : T.transfer) (storage : storage) : operation list * storage =
 
   let allowances = storage.allowances in
   let ledger = storage.ledger in
@@ -66,7 +57,7 @@ let transfer (param : T.transfer) (storage : storage) : result =
     Big_map.update param.address_to to_balance ledger in
     (([] : operation list), { storage with ledger = ledger; allowances = allowances })    
 
-let approve (param : T.approve) (storage : storage) : result =
+let approve (param : T.approve) (storage : storage) : operation list * storage =
   let allowances = storage.allowances in
   let allowance_key = { owner = Tezos.sender ; spender = param.spender } in
   let previous_value =
@@ -81,30 +72,34 @@ let approve (param : T.approve) (storage : storage) : result =
     (([] : operation list), { storage with allowances = allowances })
   end
 
-let getAllowance (param : T.getAllowance) (storage : storage) : operation list =
+let get_allowance (param : T.get_allowance) (storage : storage) : operation list =
   let value =
     match Big_map.find_opt param.request storage.allowances with
     | Some value -> value
     | None -> 0n in
   [Tezos.transaction value 0mutez param.callback]
 
-let getBalance (param : T.getBalance) (storage : storage) : operation list =
+let get_balance (param : T.get_balance) (storage : storage) : operation list =
   let value =
     match Big_map.find_opt param.owner storage.ledger with
     | Some value -> value
     | None -> 0n in
   [Tezos.transaction value 0mutez param.callback]
 
-let getTotalSupply (param : T.getTotalSupply) (storage : storage) : operation list =
+let get_total_supply (param : T.get_total_supply) (storage : storage) : operation list =
   let total = storage.total_supply in
   [Tezos.transaction total 0mutez param.callback]
 
-let main (param, storage : parameter * storage) : result =
-  begin
-    match param with
-    | Transfer param       ->  transfer param storage
-    | Approve param        ->  approve param storage
-    | GetAllowance param   -> (getAllowance param storage, storage)
-    | GetBalance param     -> (getBalance param storage, storage)
-    | GetTotalSupply param -> (getTotalSupply param storage, storage)
-  end
+type parameter =
+  | Transfer of T.transfer
+  | Approve of T.approve
+  | Get_allowance of T.get_allowance
+  | Get_balance of T.get_balance
+  | Get_total_supply of T.get_total_supply
+
+let main (p, s : parameter * storage) : operation list * storage = match p with
+| Transfer p         ->  transfer p s
+| Approve p          ->  approve  p s
+| Get_allowance p    -> (get_allowance    p s, s)
+| Get_balance p      -> (get_balance      p s, s)
+| Get_total_supply p -> (get_total_supply p s, s)
