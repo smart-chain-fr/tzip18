@@ -1,6 +1,5 @@
 type tzip18 = {
-  master_proxy : address;
-  contract_old : address;
+  contract_old : address option;
   version_old : nat option;
   version_current : nat;
   contract_next : address option;
@@ -8,6 +7,7 @@ type tzip18 = {
   is_in_use : bool;
 }
 
+type type_ligo = Na | In | Ad | St
 
 module Ledger  = struct
   type owner   = address
@@ -15,39 +15,40 @@ module Ledger  = struct
   type t = (owner, amount_) big_map
 end
 
-type token_metadata_entry = { 
-    token_id: nat; 
-    token_info: (string, bytes) map;
+type token_metadata = { 
+  token_id: nat; 
+  token_info: (string, bytes) map;
 }
 
 type approve = { 
-    spender : address; 
-    value : nat;
+  spender : address; 
+  value : nat;
 }
 
 type allowance_key = { 
-    owner : address;
-    spender : address;
+  owner : address;
+  spender : address;
 }
 
 type allowances = (allowance_key, nat) big_map
 
 type transfer = { 
-    address_from : address; 
-    address_to : address; 
-    value : nat;
+  address_from : address; 
+  address_to : address; 
+  value : nat;
 }
 
 type get_allowance = { 
-    request : allowance_key; 
-    callback : nat contract;
+  request : allowance_key; 
+  callback : nat contract;
 }
 
 type get_balance = { 
-    owner : address; 
-    callback : nat contract;
+  owner : address; 
+  callback : nat contract;
 }
 
 type get_total_supply = { 
-    request : unit ; 
-    callback : nat contract }
+  request : unit ; 
+  callback : nat contract
+}

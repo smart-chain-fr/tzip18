@@ -90,6 +90,12 @@ let get_total_supply (param : T.get_total_supply) (storage : storage) : operatio
   let total = storage.total_supply in
   [Tezos.transaction total 0mutez param.callback]
 
+
+[@view] let get_transfer ((),s: unit * storage) : T.type_ligo list = 
+  let na : T.type_ligo = Na in
+  let ad : T.type_ligo = Ad in
+  [ad; ad; na]
+
 type parameter =
   | Transfer         of T.transfer
   | Approve          of T.approve

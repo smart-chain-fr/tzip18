@@ -19,68 +19,138 @@ let unknown = Test.nth_bootstrap_account 5
 
 // ===== FAILWITH HELPER =======
 let assert_string_failure (res : test_exec_result) (expected : string) : unit =
-    let expected = Test.eval expected in
-    match res with
-    | Fail (Rejected (actual,_)) -> assert (Test.michelson_equal actual expected)
-    | Fail (Other) -> failwith "Contract have failed"
-    | Success -> failwith "Test should have failed"
+  let expected = Test.eval expected in
+  match res with
+  | Fail (Rejected (actual,_)) -> assert (Test.michelson_equal actual expected)
+  | Fail (Other) -> failwith "contract failed for an unknown reason"
+  | Success _gas -> failwith "contract did not failed but was expected to fail"
 
 // ========== DEPLOY CONTRACT HELPER ============
 let originate (type s p) (storage: s) (main: (p * s) -> operation list * s) : (p,s) typed_address * p contract =
     let (typed_address, _, _) = Test.originate main storage 0tez in
     typed_address, Test.to_contract typed_address
+let originate_ff (type s p) (file_path: string) (mainName : string) (views: string list) (storage: michelson_program) : 
+  address * (p,s) typed_address * p contract =
+  let (address_contract, code_contract, _) = Test.originate_from_file file_path mainName storage 0tez in
+  let taddress_contract = (Test.cast_address address_contract : (p, s) typed_address) in
+  address_contract, taddress_contract, Test.to_contract taddress_contract
 
 // ===================================
 // ========== BEGIN TESTS ============
 // ===================================
 let test_create_tzip18_fa12_should_work =
-    // Prepare data for initial storage
-    let empty_bigmap : (nat, Storage.Types.proposal) big_map = Big_map.empty in
-    let tzip18 : F12T.tzip18 = {
-      master_proxy    = alice;
-      contract_old    = alice;
-      version_old     = None;
-      version_current = 1;
-      contract_next   = None;
-      version_next    = None;
-      is_in_use       = false;
-    } in
-    let ledger : F12T.Ledger.t = (address, nat) big_map = Big_map.empty in
-    let token_metadata : F12T.token_metadata = { 
-      token_id   = 0; 
-      token_info = (string, bytes) map;
-    } in
-    let total_supply : F12T.total_supply = 2000000 in
-    let allowances : (allowance_key, nat) big_map = Big_map.empty in
-    let initial_storage_fa12 : F12S.Storage.t = (0,{
-        tzip18 = tzip18;
-        ledger = ledger;
-        token_metadata = token_metadata;
-        total_supply = total_supply;
-        allowances = allowances;
-    }) in
-    // Originate contract multisig 
-    let (_,contract_fa12) = originate initial_storage_fa12 F12.main in
-    // Create the initial fa12 storage
-    let empty_bigmap : (FA12_Parameter.Types.allowance_key, nat) big_map = Big_map.empty in 
-    let initial_storage_fa12 = {
-        tokens = Big_map.add alice 1000n Big_map.empty;
-        allowances = empty_bigmap;
-        total_supply = 1000n;
-    } in
-    // Originate contract fa12 
-    let (typed_address_fa12,contract_fa12) = originate initial_storage_fa12 FA12.main in
-    // // Create a new proposal
-    // let new_proposal : Parameter.Types.proposal_params = {
-    //     target_fa12 = Tezos.address contract_fa12;
-    //     target_to = echo;
-    //     token_amount = 100n;
-    // } in
-    // // Send a new proposal without being a signer should fail
-    // let () = Test.set_source echo in
-    // let fail_tx : test_exec_result = Test.transfer_to_contract contract_multisig (Create_proposal(new_proposal)) 0mutez in
-    // let () = assert_string_failure (fail_tx: test_exec_result) ("Only one of the contract signer can create an proposal":string) in
-    "✓"
+
+  // FA12 contract origination with Bob owner of 2 000,0000 tokens
+  let tzip18 : F12T.tzip18 = {
+    contract_old    = (None : address option);
+    version_old     = (None : nat option);
+    version_current = 1n;
+    contract_next   = (None : address option);
+    version_next    = (None : nat option);
+    is_in_use       = false;
+  } in
+  let token_info : (string, bytes) map = Map.literal [ 
+    ("name" : string)       , (Bytes.pack "Upgradable token");
+    ("decimals" : string)   , (Bytes.pack "3");
+    ("symbol" : string)     , (Bytes.pack "UT");
+    ("description" : string), (Bytes.pack "The upgradable token");
+    ("interfaces" : string) , (Bytes.pack "TZIP-007 TZIP-016");
+    ("authors" : string)    , (Bytes.pack "Upgradable Team");
+    ("homepage" : string)   , (Bytes.pack "smart-chain.fr");
+    ("icon" : string)       , (Bytes.pack "ipfs://QmRPwZSAUkU6nZNor1qoHu4aajPHYpMXrkyZNi8EaNWAmm");
+    ("supply" : string)     , (Bytes.pack "2000.000");
+    ("mintable" : string)   , (Bytes.pack "false");
+  ] in
+  let token_metadata = {
+    token_id = 0n;
+    token_info = token_info;
+  } in
+  let metadata = Big_map.literal [ 
+    ((0n : nat), token_metadata); 
+  ] in
+  let total_supply : nat = 2000000n in
+  let allowances : (F12T.allowance_key, nat) big_map = Big_map.empty in
+  let ledger : (address, nat) big_map = Big_map.literal [ 
+    ((bob : address), (total_supply : nat));
+  ] in
+  let initial_storage_f12 = {
+    tzip18 = tzip18;
+    ledger = ledger;
+    token_metadata = metadata;
+    total_supply = total_supply;
+    allowances = allowances;
+  } in
+  let initial_storage_lambda = Test.run (fun (x:F12.storage) -> x) initial_storage_f12 in
+  let (address_fa12, typed_address_f12, contract_f12) : 
+    address * (F12.parameter, F12.storage) typed_address * F12.parameter contract = 
+    originate_ff "contract/fa12.mligo" "main" ([] : string list) initial_storage_lambda in
+ 
+  let storage_fa12 = Test.get_storage typed_address_f12 in
+  let () = Test.log ("================== FA12 Contract initialized ==================") in
+  let () = Test.log (address_fa12) in
+  let () = Test.log (storage_fa12) in
+
+
+  // Proxy contract origination with Alice as governance
+  let ep_transfer : PX.ep = {
+    addr       = address_fa12;
+    parameters = "get_transfer";
+    is_view    = false;
+  } in
+  let ep_approve : PX.ep = {
+    addr       = address_fa12;
+    parameters = "get_approve";
+    is_view    = false;
+  } in
+  let governance_proxy : address = alice in
+  let entrypoints : (string, PX.ep) big_map = Big_map.literal [ 
+    (("transfer" : string), (ep_transfer : PX.ep));
+    (("approve"  : string), (ep_approve  : PX.ep)); 
+  ] in
+  let initial_storage_px = {
+      governance_proxy = governance_proxy;
+      entrypoints = entrypoints;
+      token_metadata = storage_fa12.token_metadata;
+  } in
+  let initial_storage_lambda = Test.run (fun (x:PX.storage) -> x) initial_storage_px in
+  let (address_px, typed_address_px, contract_px) : 
+    address * (PX.parameter, PX.storage) typed_address * PX.parameter contract = 
+    originate_ff "contract/proxy.mligo" "main" ([] : string list) initial_storage_lambda
+  in
+ 
+  let storage_px = Test.get_storage typed_address_px in
+  let () = Test.log ("================== PROXY Contract initialized ==================") in
+  let () = Test.log (address_px) in
+  let () = Test.log (storage_px) in
+  let () = Test.log (storage_px.entrypoints) in
+  let () = Test.log (storage_px.token_metadata) in
+
+
+  // Bob send 500 to charly via the proxy
+  let () = Test.set_source bob in
+  let payload_transfer : F12T.transfer = {
+    address_from = bob;
+    address_to   = charly;
+    value        = 500000n;
+  } in
+  let call_proxy_transfer : PX.call_contract = {
+    entrypoint_name = ("transfer" : string); 
+    payload         = Bytes.pack payload_transfer;
+  } in
+  let tx1 : test_exec_result = Test.transfer_to_contract
+    contract_px
+    (CallContract(call_proxy_transfer))
+    0mutez
+  in
+  let () = Test.log ("================== FA12 Call through proxy ==================") in
+  let () = Test.log (tx1) in
+
+  "OK"
+  // type initial_storage_px = {
+  //   governance_proxy : address ;
+  //   entrypoints : (string, ep) big_map; 
+  //   token_metadata : token_metadata ;
+  // }
 
 // let test_create_multisig_proposal_with_a_signer_should_work =
 //     // Prepare data for initial storage

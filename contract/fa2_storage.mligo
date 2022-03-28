@@ -21,7 +21,6 @@
  * ============================================================================= *)
 
 module Storage = struct
-  type token_id = nat
   type t = {
     tzip18 : T.tzip18;
     ledger : T.Ledger.t;
