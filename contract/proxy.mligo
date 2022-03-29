@@ -20,7 +20,6 @@ type call_contract = {
 
 type ep = {
   addr       : address;
-  parameters : string;
   is_view    : bool;
 }
 
@@ -53,22 +52,24 @@ let call_contract (param : call_contract) (storage : storage) : operation list *
   let op_call_contract : operation = 
     let amt = Tezos.amount in 
     let entry : ep = 
-      match Big_map.find_opt param.entrypoint_name storage.entrypoints with 
-      | None   -> (failwith "NO_ENTRYPOINT_FOUND" : ep)
+      match Big_map.find_opt param.entrypoint_name storage.entrypoints with
+      | None   -> (failwith "No entrypoint found" : ep)
       | Some a -> a in
     let destination_address = entry.addr in
-    let destination_contract = 
-      match (Tezos.get_contract_opt destination_address : bytes contract option) with 
-      | None   -> (failwith "NO_CONTRACT_FOUND_AT_THIS ADDRESS" : bytes contract)
-      | Some c -> c in 
-    let () = failwith "TEST 0" in
+
+    //let () = failwith  param.entrypoint_name  in
+    let destination_contract : bytes contract =
+      let c_opt : bytes contract option = Tezos.get_entrypoint_opt "%transfer" destination_address in
+      match c_opt with
+      | None   -> (failwith "No contract found at this address" : bytes contract)
+      | Some c -> c in
     Tezos.transaction param.payload amt destination_contract
   in
   ([op_call_contract] : operation list), storage
 
 // the governance proxy contract can update entrypoints 
 let upgrade (la : (ep_operation list * address)) (s : storage) : operation list * storage = 
-  let () = assert_with_error (Tezos.sender = s.governance_proxy) "PERMISSIONS_DENIED" in
+  let () = assert_with_error (Tezos.sender = s.governance_proxy) "Permission denied" in
   let rec update_storage ((l, m) : ep_operation list * (string, ep) big_map) : (string, ep) big_map =
     match l with
     | []      -> m

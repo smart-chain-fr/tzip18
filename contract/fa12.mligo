@@ -13,14 +13,21 @@ let maybe (n : nat) : nat option =
   then (None : nat option)
   else Some n
 
-let transfer (param : T.transfer) (storage : storage) : operation list * storage =
+let transfer (packed_param : bytes) (storage : storage) : operation list * storage =
+
+  let param_opt : T.transfer option = (Bytes.unpack packed_param : T.transfer option) in
+
+  let param : T.transfer = match param_opt with 
+    | None   -> (failwith "Incorrect proxy call" : T.transfer)
+    | Some a -> a
+  in
 
   let allowances = storage.allowances in
   let ledger = storage.ledger in
 
   // Check allowance amount
   let allowances =
-    if Tezos.sender = param.address_from
+    if Tezos.source = param.address_from
     then allowances
     else
       let allowance_key = { owner = param.address_from ; spender = Tezos.sender } in
@@ -30,7 +37,7 @@ let transfer (param : T.transfer) (storage : storage) : operation list * storage
         | None -> 0n in
       let authorized_value =
         match is_nat (authorized_value - param.value) with
-        | None -> (failwith "NotEnoughAllowance" : nat)
+        | None -> (failwith "NotEnough allowance" : nat)
         | Some authorized_value -> authorized_value in
       Big_map.update allowance_key (maybe authorized_value) allowances in
 
@@ -42,7 +49,7 @@ let transfer (param : T.transfer) (storage : storage) : operation list * storage
       | None -> 0n in
     let from_balance =
       match is_nat (from_balance - param.value) with
-      | None -> (failwith "NotEnoughBalance" : nat)
+      | None -> (failwith "Not enough balance" : nat)
       | Some from_balance -> from_balance in
     Big_map.update param.address_from (maybe from_balance) ledger in
 
@@ -66,7 +73,7 @@ let approve (param : T.approve) (storage : storage) : operation list * storage =
     | None -> 0n in
   begin
     if previous_value > 0n && param.value > 0n
-    then (failwith "UnsafeAllowanceChange")
+    then (failwith "Unsafe allowance change")
     else ();
     let allowances = Big_map.update allowance_key (maybe param.value) allowances in
     (([] : operation list), { storage with allowances = allowances })
@@ -97,7 +104,7 @@ let get_total_supply (param : T.get_total_supply) (storage : storage) : operatio
   [ad; ad; na]
 
 type parameter =
-  | Transfer         of T.transfer
+  | Transfer         of bytes
   | Approve          of T.approve
   | Get_allowance    of T.get_allowance
   | Get_balance      of T.get_balance

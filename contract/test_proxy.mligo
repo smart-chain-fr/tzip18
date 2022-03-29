@@ -40,7 +40,9 @@ let originate_ff (type s p) (file_path: string) (mainName : string) (views: stri
 // ===================================
 let test_create_tzip18_fa12_should_work =
 
-  // FA12 contract origination with Bob owner of 2 000,0000 tokens
+  let () = Test.log ("=====================================================================") in
+  let () = Test.log ("== FA12 CONTRACT ORIGINATED with Bob owner of 2 000,0000 tokens =====") in
+  let () = Test.log ("=====================================================================") in
   let tzip18 : F12T.tzip18 = {
     contract_old    = (None : address option);
     version_old     = (None : nat option);
@@ -86,26 +88,26 @@ let test_create_tzip18_fa12_should_work =
     originate_ff "contract/fa12.mligo" "main" ([] : string list) initial_storage_lambda in
  
   let storage_fa12 = Test.get_storage typed_address_f12 in
-  let () = Test.log ("================== FA12 Contract initialized ==================") in
-  let () = Test.log (address_fa12) in
+
+  let () = Test.log ("=====>", address_fa12) in
   let () = Test.log (storage_fa12) in
 
 
-  // Proxy contract origination with Alice as governance
+  let () = Test.log ("=====================================================================") in
+  let () = Test.log ("== PROXY CONTRACT ORIGINATED with Alice as gouvernance ==============") in
+  let () = Test.log ("=====================================================================") in
   let ep_transfer : PX.ep = {
     addr       = address_fa12;
-    parameters = "get_transfer";
     is_view    = false;
   } in
   let ep_approve : PX.ep = {
     addr       = address_fa12;
-    parameters = "get_approve";
     is_view    = false;
   } in
   let governance_proxy : address = alice in
   let entrypoints : (string, PX.ep) big_map = Big_map.literal [ 
-    (("transfer" : string), (ep_transfer : PX.ep));
-    (("approve"  : string), (ep_approve  : PX.ep)); 
+    (("%transfer" : string), (ep_transfer : PX.ep));
+    (("%approve"  : string), (ep_approve  : PX.ep)); 
   ] in
   let initial_storage_px = {
       governance_proxy = governance_proxy;
@@ -119,14 +121,15 @@ let test_create_tzip18_fa12_should_work =
   in
  
   let storage_px = Test.get_storage typed_address_px in
-  let () = Test.log ("================== PROXY Contract initialized ==================") in
-  let () = Test.log (address_px) in
+  let () = Test.log ("=====>", address_px) in
   let () = Test.log (storage_px) in
   let () = Test.log (storage_px.entrypoints) in
   let () = Test.log (storage_px.token_metadata) in
 
 
-  // Bob send 500 to charly via the proxy
+  let () = Test.log ("=====================================================================") in
+  let () = Test.log ("== FA12 Transfer through proxy ======================================") in
+  let () = Test.log ("=====================================================================") in
   let () = Test.set_source bob in
   let payload_transfer : F12T.transfer = {
     address_from = bob;
@@ -134,7 +137,7 @@ let test_create_tzip18_fa12_should_work =
     value        = 500000n;
   } in
   let call_proxy_transfer : PX.call_contract = {
-    entrypoint_name = ("transfer" : string); 
+    entrypoint_name = ("%transfer" : string); 
     payload         = Bytes.pack payload_transfer;
   } in
   let tx1 : test_exec_result = Test.transfer_to_contract
@@ -142,8 +145,8 @@ let test_create_tzip18_fa12_should_work =
     (CallContract(call_proxy_transfer))
     0mutez
   in
-  let () = Test.log ("================== FA12 Call through proxy ==================") in
-  let () = Test.log (tx1) in
+  let storage_fa12 = Test.get_storage typed_address_f12 in
+  let () = Test.log (storage_fa12) in
 
   "OK"
   // type initial_storage_px = {
