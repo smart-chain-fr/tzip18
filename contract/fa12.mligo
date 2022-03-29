@@ -79,40 +79,37 @@ let approve (param : T.approve) (storage : storage) : operation list * storage =
     (([] : operation list), { storage with allowances = allowances })
   end
 
-let get_allowance (param : T.get_allowance) (storage : storage) : operation list =
-  let value =
-    match Big_map.find_opt param.request storage.allowances with
-    | Some value -> value
-    | None -> 0n in
-  [Tezos.transaction value 0mutez param.callback]
+// let get_allowance (param : T.get_allowance) (storage : storage) : operation list =
+//   let value =
+//     match Big_map.find_opt param.request storage.allowances with
+//     | Some value -> value
+//     | None -> 0n in
+//   [Tezos.transaction value 0mutez param.callback]
 
-let get_balance (param : T.get_balance) (storage : storage) : operation list =
-  let value =
-    match Big_map.find_opt param.owner storage.ledger with
-    | Some value -> value
-    | None -> 0n in
-  [Tezos.transaction value 0mutez param.callback]
+// let get_balance (param : T.get_balance) (storage : storage) : operation list =
+//   let value =
+//     match Big_map.find_opt param.owner storage.ledger with
+//     | Some value -> value
+//     | None -> 0n in
+//   [Tezos.transaction value 0mutez param.callback]
 
-let get_total_supply (param : T.get_total_supply) (storage : storage) : operation list =
-  let total = storage.total_supply in
-  [Tezos.transaction total 0mutez param.callback]
+// let get_total_supply (param : T.get_total_supply) (storage : storage) : operation list =
+//   let total = storage.total_supply in
+//   [Tezos.transaction total 0mutez param.callback]
 
 
-[@view] let get_transfer ((),s: unit * storage) : T.type_ligo list = 
-  let na : T.type_ligo = Na in
-  let ad : T.type_ligo = Ad in
-  [ad; ad; na]
+// [@view] let get_transfer ((),s: unit * storage) : T.type_ligo list = 
+//   let na : T.type_ligo = Na in
+//   let ad : T.type_ligo = Ad in
+//   [ad; ad; na]
 
 type parameter =
   | Transfer         of bytes
   | Approve          of T.approve
-  | Get_allowance    of T.get_allowance
-  | Get_balance      of T.get_balance
-  | Get_total_supply of T.get_total_supply
+  // | Get_allowance    of T.get_allowance
+  // | Get_balance      of T.get_balance
+  // | Get_total_supply of T.get_total_supply
 
 let main (p, s : parameter * storage) : operation list * storage = match p with
 | Transfer p         ->  transfer p s
 | Approve p          ->  approve  p s
-| Get_allowance p    -> (get_allowance    p s, s)
-| Get_balance p      -> (get_balance      p s, s)
-| Get_total_supply p -> (get_total_supply p s, s)

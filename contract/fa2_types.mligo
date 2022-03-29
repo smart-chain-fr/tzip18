@@ -63,7 +63,7 @@ module Operators = struct
          Big_map.update owner (Some auths) operators
          
    let remove_operator (operators : t) (owner : owner) (operator : operator) : t =
-      if owner = operator then operators (* assert_authorisation always allow the owner so this case is not relevant *)
+      if owner = operator then operators
       else
          let () = assert_update_permission owner in
          let auths = match Big_map.find_opt owner operators with

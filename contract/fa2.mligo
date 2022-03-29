@@ -16,7 +16,6 @@ let set_operators (s:storage) (operators:T.Operators.t) = {s with operators = op
 
 let transfer : T.transfer -> storage -> operation list * storage = 
    fun(t:T.transfer) (s:storage) -> 
-   (* This function process the "tx" list. Since all transfer share the same "from_" address, we use a se *)
    let process_atomic_transfer (from_:address)(ledger, t:T.Ledger.t * T.atomic_trans) =
       let {to_;amount=amount_} = t in
       let ()     = T.Operators.assert_authorisation s.operators from_ in
