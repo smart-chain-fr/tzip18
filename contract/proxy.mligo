@@ -56,9 +56,9 @@ let call_contract (param : call_contract) (storage : storage) : operation list *
       | None   -> (failwith "No entrypoint found" : ep)
       | Some a -> a in
     let destination_address = entry.addr in
-
-    //let () = failwith  param.entrypoint_name  in
-    let destination_contract : bytes contract =
+    let destination_name : string = "%transfer" in ///
+    //let () = failwith ( destination_name ) in
+    let destination_contract : bytes contract = 
       let c_opt : bytes contract option = Tezos.get_entrypoint_opt "%transfer" destination_address in
       match c_opt with
       | None   -> (failwith "No contract found at this address" : bytes contract)

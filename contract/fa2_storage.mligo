@@ -15,16 +15,13 @@
 
 (* =============================================================================
  * Storage
- * 
- * The module Storage must be initialized at origination with the old contract address
- * old contract address
  * ============================================================================= *)
 
 module Storage = struct
   type t = {
     tzip18 : T.tzip18;
     ledger : T.Ledger.t;
-    token_metadata : T.token_metadata;
+    token_metadata : (nat, T.token_metadata) big_map;
     total_supply : nat;
     operators : T.Operators.t;
   }

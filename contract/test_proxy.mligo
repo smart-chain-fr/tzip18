@@ -48,10 +48,10 @@ let test_create_tzip18_fa12_should_work =
   let tzip18 : F12T.tzip18 = {
     contract_old    = (None : address option);
     version_old     = (None : nat option);
-    version_current = 1n;
+    version_current = (1n : nat);
     contract_next   = (None : address option);
     version_next    = (None : nat option);
-    is_in_use       = false;
+    is_in_use       = (false : bool);
   } in
   let token_info : (string, bytes) map = Map.literal [ 
     ("name" : string)       , (Bytes.pack "Upgradable token");
@@ -143,13 +143,15 @@ let test_create_tzip18_fa12_should_work =
     entrypoint_name = ("%transfer" : string); 
     payload         = Bytes.pack payload_transfer;
   } in
+
   let tx1 : test_exec_result = Test.transfer_to_contract
     contract_px
     (CallContract(call_proxy_transfer))
     0mutez
   in
-  let storage_fa12 = Test.get_storage typed_address_f12 in
-  let () = Test.log (storage_fa12) in
+  let () =  Test.log (tx1) in
+  // let storage_fa12 = Test.get_storage typed_address_f12 in
+  // let () = Test.log (storage_fa12) in
 
 
 
@@ -158,12 +160,12 @@ let test_create_tzip18_fa12_should_work =
   // let () = Test.log ("=====================================================================") in
   // let () = Test.set_source dan in
   // let tzip18 : F2T.tzip18 = {
-  //   contract_old    = (address_fa12 : address option);
-  //   version_old     = (1n : nat option);
+  //   contract_old    = (Some (address_fa12) : address option);
+  //   version_old     = (Some (1n) : nat option);
   //   version_current = (2n : nat);
   //   contract_next   = (None : address option);
   //   version_next    = (None : nat option);
-  //   is_in_use       = false;
+  //   is_in_use       = (true : bool);
   // } in
   // let token_info : (string, bytes) map = Map.literal [ 
   //   ("name" : string)       , (Bytes.pack "Upgradable token");
@@ -171,7 +173,6 @@ let test_create_tzip18_fa12_should_work =
   //   ("symbol" : string)     , (Bytes.pack "UT");
   //   ("description" : string), (Bytes.pack "The upgradable token");
   //   ("interfaces" : string) , (Bytes.pack "TZIP-007 TZIP-016");
-  //   ("authors" : string)    , (Bytes.pack "Upgradable Team");
   //   ("homepage" : string)   , (Bytes.pack "smart-chain.fr");
   //   ("icon" : string)       , (Bytes.pack "ipfs://QmRPwZSAUkU6nZNor1qoHu4aajPHYpMXrkyZNi8EaNWAmm");
   //   ("supply" : string)     , (Bytes.pack "2000.000");
@@ -185,25 +186,25 @@ let test_create_tzip18_fa12_should_work =
   //   ((0n : nat), token_metadata); 
   // ] in
   // let total_supply : nat = 2000000n in
-  // let allowances : (F12T.allowance_key, nat) big_map = Big_map.empty in
+  // let operators : (F2T.Operators.owner, F2T.Operators.operator set) big_map = Big_map.empty in
   // let ledger : (address, nat) big_map = Big_map.literal [ 
   //   ((bob : address), (total_supply : nat));
   // ] in
-  // let initial_storage_f12 = {
+  // let initial_storage_f2 = {
   //   tzip18 = tzip18;
   //   ledger = ledger;
   //   token_metadata = metadata;
   //   total_supply = total_supply;
-  //   allowances = allowances;
+  //   operators = operators;
   // } in
-  // let initial_storage_lambda = Test.run (fun (x:F12.storage) -> x) initial_storage_f12 in
-  // let (address_fa12, typed_address_f12, contract_f12) : 
-  //   address * (F12.parameter, F12.storage) typed_address * F12.parameter contract = 
-  //   originate_ff "contract/fa12.mligo" "main" ([] : string list) initial_storage_lambda in
-  // let storage_fa12 = Test.get_storage typed_address_f12 in
-  // let () = Test.log ("============", address_fa12, "============") in
+  // let initial_storage_lambda = Test.run (fun (x:F2.storage) -> x) initial_storage_f2 in
+  // let (address_fa2, typed_address_f2, contract_f2) : 
+  //   address * (F2.parameter, F2.storage) typed_address * F2.parameter contract = 
+  //   originate_ff "contract/fa2.mligo" "main" ([] : string list) initial_storage_lambda in
+  // let storage_fa2 = Test.get_storage typed_address_f2 in
+  // let () = Test.log ("============", address_fa2, "============") in
   // let () = Test.log ("=====================================================================") in
-  // let () = Test.log (storage_fa12) in
+  // let () = Test.log (storage_fa2) in
 
 
 
