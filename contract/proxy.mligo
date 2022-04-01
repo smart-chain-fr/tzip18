@@ -13,14 +13,20 @@
  * Types Definition
  * ============================================================================= *)
 
+type call_type = {
+  method  : string;
+  payload : bytes;
+}
+
 type call_contract = { 
   entrypoint_name : string; 
   payload         : bytes;
 }
 
 type ep = {
-  addr       : address;
-  is_view    : bool;
+  method  : string;
+  addr    : address;
+  is_view : bool;
 }
 
 type ep_operation = {
@@ -31,11 +37,11 @@ type ep_operation = {
 
 type token_metadata = {
   token_id   : nat;
-  token_info : (string,bytes) map;
+  token_info : (string, bytes) map;
 }
 
 (* =============================================================================
- * Storage
+ * Storage -- Todo : had global Ledger to reflect current version for wallet ?
  * ============================================================================= *)
 type storage = {
   governance_proxy : address ;
@@ -49,27 +55,29 @@ type storage = {
 
 // the proxy function 
 let call_contract (param : call_contract) (storage : storage) : operation list * storage = 
+  
   let op_call_contract : operation = 
     let amt = Tezos.amount in 
-    let entry : ep = 
-      match Big_map.find_opt param.entrypoint_name storage.entrypoints with
+    let entry : ep = match Big_map.find_opt param.entrypoint_name storage.entrypoints with
       | None   -> (failwith "No entrypoint found" : ep)
       | Some a -> a in
-    let destination_address = entry.addr in
-    let destination_name : string = "%transfer" in ///
-    //let () = failwith ( destination_name ) in
-    let destination_contract : bytes contract = 
-      let c_opt : bytes contract option = Tezos.get_entrypoint_opt "%transfer" destination_address in
-      match c_opt with
-      | None   -> (failwith "No contract found at this address" : bytes contract)
-      | Some c -> c in
-    Tezos.transaction param.payload amt destination_contract
+
+    match (Tezos.get_contract_opt entry.addr : call_type contract option) with
+    | None          -> (failwith "No contract found at this address" : operation)
+    | Some contract -> 
+      let call_param : call_type =  {
+        method  = entry.method;
+        payload = param.payload;
+      } in
+      Tezos.transaction call_param amt contract
   in
+  
   ([op_call_contract] : operation list), storage
 
 // the governance proxy contract can update entrypoints 
-let upgrade (la : (ep_operation list * address)) (s : storage) : operation list * storage = 
+let upgrade (param : (ep_operation list * address)) (s : storage) : operation list * storage = 
   let () = assert_with_error (Tezos.sender = s.governance_proxy) "Permission denied" in
+  let (upgraded_ep_list, new_metadata_address) : ep_operation list * address = param in
   let rec update_storage ((l, m) : ep_operation list * (string, ep) big_map) : (string, ep) big_map =
     match l with
     | []      -> m
@@ -84,11 +92,23 @@ let upgrade (la : (ep_operation list * address)) (s : storage) : operation list 
       in
       update_storage (xs, b)
   in
-  let (upgraded_ep_list, new_metadata_address) : ep_operation list * address = la in
   let new_entrypoints : (string, ep) big_map = update_storage (upgraded_ep_list, s.entrypoints) in
-  (([] : operation list), {s with entrypoints = new_entrypoints})
-  // let new_token_metadata :(nat, token_metadata) big_map = Tezos.call_view "get_metadata" new_metadata_address in
-  // (([] : operation list), {s with entrypoints = new_entrypoints; token_metadata = new_token_metadata})
+
+  let new_token_metadata_0n_opt : token_metadata option =
+    Tezos.call_view "get_metadata" unit new_metadata_address in
+  let new_token_metadata_0n : token_metadata = match new_token_metadata_0n_opt with
+    | Some value -> value
+    | None       -> failwith "Non-existent meta"
+  in
+  let new_token_metadata : (nat, token_metadata) big_map =
+    Big_map.update 
+      (0n : nat)
+      (Some(new_token_metadata_0n))
+      s.token_metadata
+  in
+  
+  (([] : operation list),
+  {s with entrypoints = new_entrypoints ; token_metadata = new_token_metadata})
 
 (* =============================================================================
  * Contract Views

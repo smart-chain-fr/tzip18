@@ -7,8 +7,6 @@ type tzip18 = {
   is_in_use : bool;
 }
 
-type type_ligo = Na | In | Ad | St
-
 module Ledger  = struct
   type owner   = address
   type amount_ = nat

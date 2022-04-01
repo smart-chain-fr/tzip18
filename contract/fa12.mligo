@@ -8,6 +8,11 @@
 
 type storage = S.Storage.t
 
+type parameter = {
+  method  : string;
+  payload : bytes;
+}
+
 let maybe (n : nat) : nat option =
   if n = 0n
   then (None : nat option)
@@ -18,7 +23,7 @@ let transfer (packed_param : bytes) (storage : storage) : operation list * stora
   let param_opt : T.transfer option = (Bytes.unpack packed_param : T.transfer option) in
 
   let param : T.transfer = match param_opt with 
-    | None   -> (failwith "Incorrect proxy call" : T.transfer)
+    | None   -> (failwith "Incorrect bytes for transfer_V1 call" : T.transfer)
     | Some a -> a
   in
 
@@ -64,7 +69,15 @@ let transfer (packed_param : bytes) (storage : storage) : operation list * stora
     Big_map.update param.address_to to_balance ledger in
     (([] : operation list), { storage with ledger = ledger; allowances = allowances })    
 
-let approve (param : T.approve) (storage : storage) : operation list * storage =
+let approve (packed_param : bytes) (storage : storage) : operation list * storage =
+
+  let param_opt : T.approve option = (Bytes.unpack packed_param : T.approve option) in
+
+  let param : T.approve = match param_opt with 
+    | None   -> (failwith "Incorrect bytes for approve_V1 call" : T.approve)
+    | Some a -> a
+  in
+
   let allowances = storage.allowances in
   let allowance_key = { owner = Tezos.sender ; spender = param.spender } in
   let previous_value =
@@ -79,37 +92,13 @@ let approve (param : T.approve) (storage : storage) : operation list * storage =
     (([] : operation list), { storage with allowances = allowances })
   end
 
-// let get_allowance (param : T.get_allowance) (storage : storage) : operation list =
-//   let value =
-//     match Big_map.find_opt param.request storage.allowances with
-//     | Some value -> value
-//     | None -> 0n in
-//   [Tezos.transaction value 0mutez param.callback]
+[@view] let get_balance (addr, s : address * storage) : nat option = Big_map.find_opt addr s.ledger
 
-// let get_balance (param : T.get_balance) (storage : storage) : operation list =
-//   let value =
-//     match Big_map.find_opt param.owner storage.ledger with
-//     | Some value -> value
-//     | None -> 0n in
-//   [Tezos.transaction value 0mutez param.callback]
+[@view] let get_metadata ((), s : unit * storage) : T.token_metadata = match Big_map.find_opt 0n s.token_metadata with
+  | None   -> (failwith "No metadata" : T.token_metadata)
+  | Some m -> m
 
-// let get_total_supply (param : T.get_total_supply) (storage : storage) : operation list =
-//   let total = storage.total_supply in
-//   [Tezos.transaction total 0mutez param.callback]
-
-
-// [@view] let get_transfer ((),s: unit * storage) : T.type_ligo list = 
-//   let na : T.type_ligo = Na in
-//   let ad : T.type_ligo = Ad in
-//   [ad; ad; na]
-
-type parameter =
-  | Transfer         of bytes
-  | Approve          of T.approve
-  // | Get_allowance    of T.get_allowance
-  // | Get_balance      of T.get_balance
-  // | Get_total_supply of T.get_total_supply
-
-let main (p, s : parameter * storage) : operation list * storage = match p with
-| Transfer p         ->  transfer p s
-| Approve p          ->  approve  p s
+let main (p, s : parameter * storage) : operation list * storage =
+  if      p.method = "transfer_V1" then transfer p.payload s
+  else if p.method = "approve_V1"  then approve  p.payload s
+  else                                  failwith "Non-existant method" 

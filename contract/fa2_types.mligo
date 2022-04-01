@@ -35,10 +35,10 @@ module Ledger = struct
 end
 
 module Operators = struct
-   type owner    = address
-   type operator = address
-   type token_id = nat
-   type t = (owner, operator set) big_map
+  type owner    = address
+  type operator = address
+  type token_id = nat
+  type t = (owner, operator set) big_map
 
 (** if transfer policy is Owner_or_operator_transfer *)
   let assert_authorisation (operators : t) (from_ : address) : unit = 
@@ -79,7 +79,7 @@ type token_metadata = {
   token_info : (string,bytes) map;
 }
 
-type operator = [@layout:comb] {
+type operator = {
   owner    : address;
   operator : address;
   token_id : nat; 
@@ -88,32 +88,34 @@ type operator = [@layout:comb] {
 type unit_update      = Add_operator of operator | Remove_operator of operator
 type update_operators = unit_update list
 
-type atomic_trans = [@layout:comb] {
-   to_      : address;
-   amount   : nat;
+type atomic_trans = {
+  to_      : address;
+  amount   : nat;
 }
 
 type transfer_from = {
-   from_ : address;
-   tx    : atomic_trans list
+  from_ : address;
+  tx    : atomic_trans list
 }
+
 type transfer = transfer_from list
 
 type request = {
-   owner    : address;
-   token_id : nat;
+  owner    : address;
+  token_id : nat;
 }
 
 type callback = {
-   request : request;
-   balance : nat;
+  request : request;
+  balance : nat;
 }
 
 type balance_of = {
-   requests : request list;
-   callback : callback list contract;
+  requests : request list;
+  callback : callback list contract;
 }
 
 type get_total_supply = { 
-    request : unit ; 
-    callback : nat contract }
+  request : unit ; 
+  callback : nat contract
+  }
