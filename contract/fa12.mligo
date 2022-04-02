@@ -92,9 +92,13 @@ let approve (packed_param : bytes) (storage : storage) : operation list * storag
     (([] : operation list), { storage with allowances = allowances })
   end
 
-[@view] let get_balance (addr, s : address * storage) : nat option = Big_map.find_opt addr s.ledger
+[@view] let get_balance (addr, s : address * storage) : nat =
+  match Big_map.find_opt addr s.ledger with
+  | None   -> 0n
+  | Some m -> m
 
-[@view] let get_metadata ((), s : unit * storage) : T.token_metadata = match Big_map.find_opt 0n s.token_metadata with
+[@view] let get_metadata ((), s : unit * storage) : T.token_metadata =
+  match Big_map.find_opt 0n s.token_metadata with
   | None   -> (failwith "No metadata" : T.token_metadata)
   | Some m -> m
 

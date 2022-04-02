@@ -27,7 +27,15 @@ let transfer : bytes -> storage -> operation list * storage =
     | Some a -> a
   in
   
-  let process_atomic_transfer (from_:address)(ledger, t:T.Ledger.t * T.atomic_trans) =
+  // TZIP 18 : check if the old version still manage tokens
+  let contract_old : address = match s.tzip18.contract_old with
+    | None   -> (failwith "Incorrect origination" : address)
+    | Some a -> a
+  in
+  let () = T.Ledger.upgrade (contract_old, t) in
+
+
+  let process_atomic_transfer (from_ : address) (ledger, t : T.Ledger.t * T.atomic_trans) =
     let {to_;amount=amount_} = t in
     let ()     = T.Operators.assert_authorisation s.operators from_ in
     let ledger = T.Ledger.decrease_token_amount_for_user ledger from_ amount_ in
