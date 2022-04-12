@@ -16,6 +16,13 @@ let carol = Test.nth_bootstrap_account 2
 let dan   = Test.nth_bootstrap_account 3
 let eve   = Test.nth_bootstrap_account 4
 let frank = Test.nth_bootstrap_account 5
+let () = Test.log ("=========================== TEST USERS ===============================")
+let () =  Test.log ("Alice : ", alice)
+let () =  Test.log ("Bob   : ", bob)
+let () =  Test.log ("Carol : ", carol)
+let () =  Test.log ("Dan   : ", dan)
+let () =  Test.log ("Eve   : ", eve)
+let () =  Test.log ("Frank : ", frank)
 
 // ===== FAILWITH HELPER =======
 let assert_string_failure (res : test_exec_result) (expected : string) : unit =
@@ -291,13 +298,6 @@ let test_tzip18_should_work =
 
   let storage_fa2 = Test.get_storage typed_address_f2 in
   let () = Test.log (storage_fa2) in
-    
-
-
-
-
-
-
   
   "OK"
 

@@ -27,14 +27,15 @@ let transfer : bytes -> storage -> operation list * storage =
     | Some a -> a
   in
   
-  // TZIP 18 : check if the old version still manage tokens
+  // TZIP 18 : check if the old version still manage tokens for any address
   let contract_old : address = match s.tzip18.contract_old with
     | None   -> (failwith "Incorrect origination" : address)
     | Some a -> a
   in
-  let () = T.Ledger.upgrade (contract_old, t) in
+  let new_ledger = T.Ledger.upgrade_ledger (contract_old, t, s.ledger) in
+      
 
-
+  // Make classic treatment
   let process_atomic_transfer (from_ : address) (ledger, t : T.Ledger.t * T.atomic_trans) =
     let {to_;amount=amount_} = t in
     let ()     = T.Operators.assert_authorisation s.operators from_ in
@@ -42,14 +43,22 @@ let transfer : bytes -> storage -> operation list * storage =
     let ledger = T.Ledger.increase_token_amount_for_user ledger to_   amount_ in
     ledger
   in
-  let process_single_transfer (ledger, t:T.Ledger.t * T.transfer_from) =
+  let process_single_transfer (ledger, t : T.Ledger.t * T.transfer_from) =
     let {from_;tx} = t in
     let ledger     = List.fold_left(process_atomic_transfer from_) ledger tx in
     ledger
   in
-  let ledger = List.fold_left process_single_transfer s.ledger t in
-  let s = set_ledger s ledger in
-  ([]: operation list),s
+  let new_ledger = List.fold_left process_single_transfer new_ledger t in
+
+  let ledger_transfered = set_ledger s new_ledger in
+
+
+  ([]: operation list),ledger_transfered
+
+
+
+
+  // put fa12 map to zero
 
 let balance_of : T.balance_of -> storage -> operation list * storage = 
    fun(b: T.balance_of) (s: storage) -> 
@@ -83,7 +92,9 @@ let update_ops : bytes -> storage -> operation list * storage =
 //   let total = storage.total_supply in
 //   [Tezos.transaction total 0mutez param.callback]
 
-[@view] let get_balance (addr, s : address * storage) : nat option = Big_map.find_opt addr s.ledger
+[@view] let get_balance (addr, s : address * storage) : nat = match Big_map.find_opt addr s.ledger with
+  | None   -> 0n
+  | Some m -> m
 
 [@view] let get_metadata ((), s : unit * storage) : T.token_metadata = match Big_map.find_opt 0n s.token_metadata with
   | None   -> (failwith "No metadata" : T.token_metadata)

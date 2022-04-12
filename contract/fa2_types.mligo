@@ -12,6 +12,11 @@ type atomic_trans = {
   amount   : nat;
 }
 
+type call_type = {
+  method  : string;
+  payload : bytes;
+}
+
 type transfer_from = {
   from_ : address;
   tx    : atomic_trans list
@@ -60,42 +65,77 @@ module Ledger = struct
   type t = (owner, amount_) big_map
   
 
-  let upgrade (contract_old, trans : address * transfer) : unit =
 
-    let rec upgrade_list (addr : address) : unit =
-      ()
-    in
+  let upgrade_ledger (contract_old, trans, ledger : address * transfer * t) : t =
 
-
-    let address_list : address list = // list of the address to update
-      let rec decompose_list (trans, addr_list : transfer * address list) =
+    let address_list_to_update : address list = // list of the address to update
+      let rec decompose_list (trans, addr_list : transfer * address list) : address list =
         match trans with 
         | []      -> addr_list
         | x :: xs ->
           let added_addr : address = x.from_ in
-          let new_addr_list = added_addr :: addr_list in
+          let new_addr_list : address list = added_addr :: addr_list in
           let atomic_list : atomic_trans list = x.tx in
-          let rec get_tx_address (atomic_list, new_addr_list : atomic_trans list * address list) =
+          let rec get_tx_address (atomic_list, new_addr_list : atomic_trans list * address list) : address list =
             match atomic_list with 
             | []      -> new_addr_list
             | x :: xs -> 
-              get_tx_address xs (x.to_ :: new_addr_list)
+              let new_addr_list : address list = x.to_ :: new_addr_list in
+              get_tx_address (xs, new_addr_list)
           in
-          let new_addr_list = get_tx_address atomic_list new_addr_list in
-          decompose_list trans ()
+          let new_addr_list :  address list = get_tx_address (atomic_list, new_addr_list) in
+          decompose_list (xs, new_addr_list)
       in
-      decompose_list trans
+      decompose_list (trans, ([] : address list))
     in
 
 
-    let new_user_balance : nat option =
-      Tezos.call_view "get_balance" address in
-    let new_token_metadata_0n : token_metadata = match new_token_metadata_0n_opt with
-      | Some value -> value
-      | None       -> failwith "Non-existent meta"
+    //Determine the addresses to be upgraded
+    let view_balance (addr : address) : nat =
+      let old_balance_opt : nat option = Tezos.call_view "get_balance" addr contract_old in
+      let old_balance : nat = match old_balance_opt with
+        | Some value -> value
+        | None       -> failwith "Non-existent meta"
+      in
+      old_balance
     in
-    let () = failwith "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" in
-    ()
+
+
+    let addresses_to_put_at_zero : address list * nat list =
+      let rec view_and_upgrade_map (to_check, to_put_at_zero, tokens : address list * address list * nat list) : address list * nat list  =
+        match to_check with
+        | []      -> to_put_at_zero, tokens
+        | x :: xs -> 
+          let bal = view_balance x in
+          if ( bal > 0n ) then view_and_upgrade_map(xs, x :: to_put_at_zero, bal :: tokens)
+          else view_and_upgrade_map(xs, to_put_at_zero, tokens)
+      in
+      view_and_upgrade_map (address_list_to_update, ([] : address list), ([] : nat list))
+    in
+
+    let (addr_list, values_list) : address list * nat list  = addresses_to_put_at_zero in
+
+    let upgrade_to_v2 (addr_list, values_list, ledger : address list * nat list * t) : t =
+      let rec upgrade_to_v2 (addr_list, values_list, ledger : address list * nat list * t) : t =
+        match addr_list, values_list with
+        [], [] -> ledger
+        | [], _lst -> failwith "size don't match"
+        | _lst, [] -> failwith "size don't match"
+        | x::xs, y::ys ->
+          let new_decimal_rate : nat = 1000n in
+          let new_balance = y * new_decimal_rate in
+          let new_ledger = Map.update (x : address) (Some new_balance) ledger in
+          upgrade_to_v2 (xs, ys, new_ledger)
+      in
+      upgrade_to_v2 (addr_list, values_list, ledger )
+    in
+
+    let new_ledger : t = match List.head_opt addr_list with
+      | Some a -> upgrade_to_v2(addr_list, values_list, ledger)
+      | None   -> ledger
+    in
+
+    new_ledger
 
 
 
