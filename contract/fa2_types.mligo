@@ -1,4 +1,5 @@
 type tzip18 = {
+  proxy : address;
   contract_old : address option;
   version_old : nat option;
   version_current : nat;
@@ -66,7 +67,7 @@ module Ledger = struct
   
 
 
-  let upgrade_ledger (contract_old, trans, ledger : address * transfer * t) : t =
+  let upgrade_ledger (contract_old, trans, ledger : address * transfer * t) : t * address list =
 
     let address_list_to_update : address list = // list of the address to update
       let rec decompose_list (trans, addr_list : transfer * address list) : address list =
@@ -135,7 +136,7 @@ module Ledger = struct
       | None   -> ledger
     in
 
-    new_ledger
+    (new_ledger, address_list_to_update)
 
 
 

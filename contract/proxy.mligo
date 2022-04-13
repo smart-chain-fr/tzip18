@@ -35,6 +35,11 @@ type ep_operation = {
   entrypoint  : ep option;
 }
 
+type change_version = {
+  old : address;
+  new : address;
+}
+
 type token_metadata = {
   token_id   : nat;
   token_info : (string, bytes) map;
@@ -44,7 +49,7 @@ type token_metadata = {
  * Storage -- Todo : had global Ledger to reflect current version for wallet ?
  * ============================================================================= *)
 type storage = {
-  governance_proxy : address ;
+  governance : address ;
   entrypoints : (string, ep) big_map; 
   token_metadata : (nat, token_metadata) big_map;
 }
@@ -52,6 +57,7 @@ type storage = {
 (* =============================================================================
  * Entrypoint Functions
  * ============================================================================= *)
+
 
 // the proxy function 
 let call_contract (param : call_contract) (storage : storage) : operation list * storage = 
@@ -75,9 +81,9 @@ let call_contract (param : call_contract) (storage : storage) : operation list *
   ([op_call_contract] : operation list), storage
 
 // the governance proxy contract can update entrypoints 
-let upgrade (param : (ep_operation list * address)) (s : storage) : operation list * storage = 
-  let () = assert_with_error (Tezos.sender = s.governance_proxy) "Permission denied" in
-  let (upgraded_ep_list, new_metadata_address) : ep_operation list * address = param in
+let upgrade (param : (ep_operation list * change_version option  * address)) (s : storage) : operation list * storage = 
+  let () = assert_with_error (Tezos.sender = s.governance) "Permission denied" in
+  let (upgraded_ep_list, change_version_opt, new_metadata_address) : ep_operation list * change_version option * address = param in
   let rec update_storage ((l, m) : ep_operation list * (string, ep) big_map) : (string, ep) big_map =
     match l with
     | []      -> m
@@ -87,7 +93,8 @@ let upgrade (param : (ep_operation list * address)) (s : storage) : operation li
         | Some _ep -> 
           if not x.is_removed then match x.entrypoint with
           | None   -> m
-          | Some c -> Big_map.update x.name (Some c) m
+          | Some c ->
+            Big_map.update x.name (Some c) m
           else m
       in
       update_storage (xs, b)
@@ -107,22 +114,28 @@ let upgrade (param : (ep_operation list * address)) (s : storage) : operation li
       s.token_metadata
   in
   
-  (([] : operation list),
-  {s with entrypoints = new_entrypoints ; token_metadata = new_token_metadata})
 
-(* =============================================================================
- * Contract Views
- * ============================================================================= *)
-
-// contract users can get the address through an on-chain view if they would rather 
-// [@view] let get_entrypoint_address (entrypoint, storage : string * storage) : address = 
-//     match Big_map.find_opt entrypoint storage.entrypoints with 
-//     | None -> (failwith error_NO_ENTRYPOINT_FOUND : address)
-//     | Some a -> a 
+  //Ask the old version put the new contract as master
+  match change_version_opt with
+  | None        -> (([] : operation list), {s with entrypoints = new_entrypoints ; token_metadata = new_token_metadata})
+  | Some change ->
+    let op_change : operation = 
+      match (Tezos.get_contract_opt change.old : call_type contract option) with
+    | None          -> (failwith "No contract found at this address" : operation)
+    | Some contract -> 
+        let amt = Tezos.amount in 
+        let payload : address = change.new in
+        let call_param : call_type = {
+          method  = ("change_version" : string); 
+          payload = Bytes.pack payload;
+        } in
+        Tezos.transaction call_param amt contract
+    in
+    (([op_change] : operation list), {s with entrypoints = new_entrypoints ; token_metadata = new_token_metadata})
 
 type parameter = 
   | CallContract of call_contract
-  | Upgrade      of ep_operation list * address
+  | Upgrade      of ep_operation list * change_version option * address
 
 let main (p, s : parameter * storage) : operation list * storage = match p with
   | CallContract p -> call_contract p s

@@ -47,11 +47,58 @@ let originate_ff (type s p) (file_path: string) (mainName : string) (views: stri
 // ===================================
 let test_tzip18_should_work =
 
+
+  let () = Test.log ("=====================================================================") in
+  let () = Test.log ("== PROXY CONTRACT ORIGINATED with Alice as gouvernance ==============") in
+  let () = Test.log ("=====================================================================") in
+  let () = Test.set_source alice in
+  let token_info : (string, bytes) map = Map.literal [ 
+    ("name" : string)       , (Bytes.pack "Upgradable token");
+    ("decimals" : string)   , (Bytes.pack "3");
+    ("symbol" : string)     , (Bytes.pack "UT");
+    ("description" : string), (Bytes.pack "The upgradable token");
+    ("interfaces" : string) , (Bytes.pack "TZIP-007 TZIP-016 TZIP-018");
+    ("authors" : string)    , (Bytes.pack "Upgradable Team");
+    ("homepage" : string)   , (Bytes.pack "smart-chain.fr");
+    ("icon" : string)       , (Bytes.pack "ipfs://QmRPwZSAUkU6nZNor1qoHu4aajPHYpMXrkyZNi8EaNWAmm");
+    ("supply" : string)     , (Bytes.pack "2000.000");
+    ("mintable" : string)   , (Bytes.pack "false");
+  ] in
+  let token_metadata = {
+    token_id = 0n;
+    token_info = token_info;
+  } in
+  let metadata = Big_map.literal [ 
+    ((0n : nat), token_metadata); 
+  ] in
+  let governance : address = alice in
+  let entrypoints : (string, PX.ep) big_map = Big_map.empty in
+  let initial_storage_px = {
+      governance = governance;
+      entrypoints = entrypoints;
+      token_metadata = metadata;
+  } in
+  let initial_storage_lambda = Test.run (fun (x:PX.storage) -> x) initial_storage_px in
+  let (address_px, typed_address_px, contract_px) : 
+    address * (PX.parameter, PX.storage) typed_address * PX.parameter contract = 
+    originate_ff "contract/proxy.mligo" "main" ([] : string list) initial_storage_lambda
+  in
+  let storage_px = Test.get_storage typed_address_px in
+  let () = Test.log ("============", address_px, "============") in
+  let () = Test.log ("=====================================================================") in
+  let () = Test.log (storage_px.entrypoints) in
+  let () = Test.log (storage_px.token_metadata) in
+
+
+
+
+
   let () = Test.log ("=====================================================================") in
   let () = Test.log ("== FA12 CONTRACT ORIGINATED with Bob owner of 2 000,0000 tokens =====") in
   let () = Test.log ("=====================================================================") in
   let () = Test.set_source bob in
   let tzip18 : F12T.tzip18 = {
+    proxy           = address_px;
     contract_old    = (None : address option);
     version_old     = (None : nat option);
     version_current = (1n : nat);
@@ -102,40 +149,49 @@ let test_tzip18_should_work =
 
 
 
+
   let () = Test.log ("=====================================================================") in
-  let () = Test.log ("== PROXY CONTRACT ORIGINATED with Alice as gouvernance ==============") in
+  let () = Test.log ("================= PROXY CONTRACT UPGRADED with FA12 by Alice ========") in
   let () = Test.log ("=====================================================================") in
   let () = Test.set_source alice in
+
   let ep_transfer : PX.ep = {
     method     = "transfer_V1";
     addr       = address_fa12;
     is_view    = false;
+  } in
+  let op_transfer : PX.ep_operation = {
+    name        = "transfer";
+    is_removed  = false;
+    entrypoint  = Some (ep_transfer);
   } in
   let ep_approve : PX.ep = {
     method     = "approve_V1";
     addr       = address_fa12;
     is_view    = false;
   } in
-  let governance_proxy : address = alice in
-  let entrypoints : (string, PX.ep) big_map = Big_map.literal [ 
-    (("transfer" : string), (ep_transfer : PX.ep));
-    (("approve"  : string), (ep_approve  : PX.ep)); 
-  ] in
-  let initial_storage_px = {
-      governance_proxy = governance_proxy;
-      entrypoints = entrypoints;
-      token_metadata = storage_fa12.token_metadata;
+  let op_approve : PX.ep_operation = {
+    name        = "approve";
+    is_removed  = false;
+    entrypoint  = Some (ep_approve);
   } in
-  let initial_storage_lambda = Test.run (fun (x:PX.storage) -> x) initial_storage_px in
-  let (address_px, typed_address_px, contract_px) : 
-    address * (PX.parameter, PX.storage) typed_address * PX.parameter contract = 
-    originate_ff "contract/proxy.mligo" "main" ([] : string list) initial_storage_lambda
+
+  let no_version_list : PX.change_version option = (None : PX.change_version option) in
+  
+  let op_list : PX.ep_operation list = [op_transfer; op_approve] in
+  let addr_slave    : address = address_fa12 in
+  let call_proxy_upgrade : PX.ep_operation list * PX.change_version option * address = (op_list, no_version_list, addr_slave) in
+
+  let tx2 : test_exec_result = Test.transfer_to_contract
+    contract_px
+    (Upgrade(call_proxy_upgrade))
+    0mutez
   in
+  let () =  Test.log (tx2) in
   let storage_px = Test.get_storage typed_address_px in
-  let () = Test.log ("============", address_px, "============") in
-  let () = Test.log ("=====================================================================") in
   let () = Test.log (storage_px.entrypoints) in
   let () = Test.log (storage_px.token_metadata) in
+
 
 
 
@@ -169,6 +225,7 @@ let test_tzip18_should_work =
   let () = Test.log ("=====================================================================") in
   let () = Test.set_source dan in
   let tzip18 : F2T.tzip18 = {
+    proxy           = address_px;
     contract_old    = (Some (address_fa12) : address option);
     version_old     = (Some (1n) : nat option);
     version_current = (2n : nat);
@@ -217,7 +274,7 @@ let test_tzip18_should_work =
 
 
   let () = Test.log ("=====================================================================") in
-  let () = Test.log ("== PROXY CONTRACT UPGRADED by Alice =================================") in
+  let () = Test.log ("============= PROXY CONTRACT UPGRADED to FA2 by Alice ===============") in
   let () = Test.log ("=====================================================================") in
   let () = Test.set_source alice in
 
@@ -245,9 +302,15 @@ let test_tzip18_should_work =
     entrypoint  = Some (ep_approve);
   } in
 
+
+  let new_version_list : PX.change_version = {
+    old = address_fa12;
+    new = address_fa2;
+  } in
+
   let op_list : PX.ep_operation list = [op_transfer; op_approve] in
-  let addr    : address = address_fa2 in
-  let call_proxy_upgrade : PX.ep_operation list * address = (op_list, addr) in
+  let addr_slave : address = address_fa2 in
+  let call_proxy_upgrade : PX.ep_operation list * PX.change_version option* address = (op_list, Some(new_version_list), addr_slave) in
 
   let tx2 : test_exec_result = Test.transfer_to_contract
     contract_px
@@ -258,11 +321,6 @@ let test_tzip18_should_work =
   let storage_px = Test.get_storage typed_address_px in
   let () = Test.log (storage_px.entrypoints) in
   let () = Test.log (storage_px.token_metadata) in
-  
-
-
-
-
 
 
   let () = Test.log ("=====================================================================") in
@@ -298,6 +356,9 @@ let test_tzip18_should_work =
 
   let storage_fa2 = Test.get_storage typed_address_f2 in
   let () = Test.log (storage_fa2) in
+
+  let storage_fa12 = Test.get_storage typed_address_f12 in
+  let () = Test.log (storage_fa12) in
   
   "OK"
 

@@ -32,7 +32,7 @@ let transfer : bytes -> storage -> operation list * storage =
     | None   -> (failwith "Incorrect origination" : address)
     | Some a -> a
   in
-  let new_ledger = T.Ledger.upgrade_ledger (contract_old, t, s.ledger) in
+  let (new_ledger, addresses_to_purge) : T.Ledger.t * address list  = T.Ledger.upgrade_ledger (contract_old, t, s.ledger) in
       
 
   // Make classic treatment
@@ -50,15 +50,34 @@ let transfer : bytes -> storage -> operation list * storage =
   in
   let new_ledger = List.fold_left process_single_transfer new_ledger t in
 
-  let ledger_transfered = set_ledger s new_ledger in
-
-
-  ([]: operation list),ledger_transfered
+  let new_storage = set_ledger s new_ledger in
 
 
 
+  // Put fa12 map to zero
+  match s.tzip18.contract_old with
+  | None      -> ([]: operation list),new_storage
+  | Some addr ->
+    let op_purge : operation = 
+      match (Tezos.get_contract_opt addr : T.call_type contract option) with
+    | None          -> (failwith "No contract found at this address" : operation)
+    | Some contract -> 
+        let amt = Tezos.amount in 
+        let payload : address list = addresses_to_purge in
+        let call_param : T.call_type = {
+          method  = ("purge_addresses" : string); 
+          payload = Bytes.pack payload;
+        } in
+        Tezos.transaction call_param amt contract
+    in
+    ([op_purge] : operation list), new_storage
 
-  // put fa12 map to zero
+  
+
+
+
+
+
 
 let balance_of : T.balance_of -> storage -> operation list * storage = 
    fun(b: T.balance_of) (s: storage) -> 
@@ -101,6 +120,7 @@ let update_ops : bytes -> storage -> operation list * storage =
   | Some m -> m
 
 let main (p, s : parameter * storage) : operation list * storage =
+  let _ = assert_with_error (Tezos.sender = s.tzip18.proxy) "Only the proxy can call this contract" in
   if      p.method = "transfer_V2"          then transfer   p.payload s
   else if p.method = "update_operators_V1"  then update_ops p.payload s
   else                                           failwith "Non-existent method" 

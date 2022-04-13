@@ -1,4 +1,5 @@
 type tzip18 = {
+  proxy : address;
   contract_old : address option;
   version_old : nat option;
   version_current : nat;
