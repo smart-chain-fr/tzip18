@@ -1,21 +1,20 @@
+// Tzip 18 types
 type tzip18 = {
   proxy : address;
-  contract_old : address option;
-  version_old : nat option;
-  version_current : nat;
+  version : nat;
+  contract_prev : address option;
   contract_next : address option;
-  version_next : nat option;
-  is_in_use : bool;
-}
-
-type atomic_trans = {
-  to_      : address;
-  amount   : nat;
 }
 
 type call_type = {
   method  : string;
   payload : bytes;
+}
+
+
+type atomic_trans = {
+  to_      : address;
+  amount   : nat;
 }
 
 type transfer_from = {
@@ -66,7 +65,7 @@ module Ledger = struct
   type t = (owner, amount_) big_map
   
 
-
+  //Tzip 18 method for lazy update
   let upgrade_ledger (contract_old, trans, ledger : address * transfer * t) : t * address list =
 
     let address_list_to_update : address list = // list of the address to update

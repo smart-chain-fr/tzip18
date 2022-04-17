@@ -99,12 +99,9 @@ let test_tzip18_should_work =
   let () = Test.set_source bob in
   let tzip18 : F12T.tzip18 = {
     proxy           = address_px;
-    contract_old    = (None : address option);
-    version_old     = (None : nat option);
-    version_current = (1n : nat);
+    version         = (1n : nat);
+    contract_prev   = (None : address option);
     contract_next   = (None : address option);
-    version_next    = (None : nat option);
-    is_in_use       = (false : bool);
   } in
   let token_info : (string, bytes) map = Map.literal [ 
     ("name" : string)       , (Bytes.pack "Upgradable token");
@@ -226,12 +223,9 @@ let test_tzip18_should_work =
   let () = Test.set_source dan in
   let tzip18 : F2T.tzip18 = {
     proxy           = address_px;
-    contract_old    = (Some (address_fa12) : address option);
-    version_old     = (Some (1n) : nat option);
-    version_current = (2n : nat);
+    contract_prev   = (Some (address_fa12) : address option);
+    version         = (2n : nat);
     contract_next   = (None : address option);
-    version_next    = (None : nat option);
-    is_in_use       = (true : bool);
   } in
   let token_info : (string, bytes) map = Map.literal [ 
     ("name" : string)       , (Bytes.pack "Upgradable token V2");

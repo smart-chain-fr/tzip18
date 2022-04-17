@@ -28,11 +28,11 @@ let transfer : bytes -> storage -> operation list * storage =
   in
   
   // TZIP 18 : check if the old version still manage tokens for any address
-  let contract_old : address = match s.tzip18.contract_old with
+  let contract_prev : address = match s.tzip18.contract_prev with
     | None   -> (failwith "Incorrect origination" : address)
     | Some a -> a
   in
-  let (new_ledger, addresses_to_purge) : T.Ledger.t * address list  = T.Ledger.upgrade_ledger (contract_old, t, s.ledger) in
+  let (new_ledger, addresses_to_purge) : T.Ledger.t * address list  = T.Ledger.upgrade_ledger (contract_prev, t, s.ledger) in
       
 
   // Make classic treatment
@@ -52,10 +52,8 @@ let transfer : bytes -> storage -> operation list * storage =
 
   let new_storage = set_ledger s new_ledger in
 
-
-
   // Put fa12 map to zero
-  match s.tzip18.contract_old with
+  match s.tzip18.contract_prev with
   | None      -> ([]: operation list),new_storage
   | Some addr ->
     let op_purge : operation = 
@@ -71,13 +69,6 @@ let transfer : bytes -> storage -> operation list * storage =
         Tezos.transaction call_param amt contract
     in
     ([op_purge] : operation list), new_storage
-
-  
-
-
-
-
-
 
 let balance_of : T.balance_of -> storage -> operation list * storage = 
    fun(b: T.balance_of) (s: storage) -> 
@@ -107,9 +98,33 @@ let update_ops : bytes -> storage -> operation list * storage =
    let s = set_operators s operators in
    ([]: operation list),s
 
-// let get_total_supply (param : T.get_total_supply) (storage : storage) : operation list =
-//   let total = storage.total_supply in
-//   [Tezos.transaction total 0mutez param.callback]
+let change_version (packed_param : bytes) (storage : storage) : operation list * storage =
+  let param_opt : address option = (Bytes.unpack packed_param : address option) in
+  let param : address = match param_opt with 
+    | None   -> (failwith "Incorrect bytes for transfer_V1 call" : address)
+    | Some a -> a
+  in
+  (([] : operation list), {storage with tzip18.contract_next = Some(param) } )
+
+
+let purge (packed_param : bytes) (store : storage) : operation list * storage =
+  let param_opt : address list option = (Bytes.unpack packed_param : address list option) in
+  let param : address list = match param_opt with 
+    | None   -> (failwith "Incorrect bytes for transfer_V1 call" : address list)
+    | Some a -> a
+  in
+  let ledger = store.ledger in
+
+  // Update the ledger to zero
+  let rec put_at_zero (addr_list, ledg : address list * (address, nat) big_map) : (address, nat) big_map =
+    match addr_list with
+    | []      -> ledg
+    | x :: xs -> 
+      let new_ledger : (address, nat) big_map = Big_map.update (x : address) (Some(0n)) ledg in
+      put_at_zero (xs, new_ledger)
+  in
+  let new_ledger : (address, nat) big_map = put_at_zero (param, ledger) in
+  (([] : operation list), {store with ledger = new_ledger})
 
 [@view] let get_balance (addr, s : address * storage) : nat = match Big_map.find_opt addr s.ledger with
   | None   -> 0n
@@ -123,4 +138,6 @@ let main (p, s : parameter * storage) : operation list * storage =
   let _ = assert_with_error (Tezos.sender = s.tzip18.proxy) "Only the proxy can call this contract" in
   if      p.method = "transfer_V2"          then transfer   p.payload s
   else if p.method = "update_operators_V1"  then update_ops p.payload s
+  else if p.method = "change_version"       then change_version p.payload s
+  else if p.method = "purge_addresses"      then purge          p.payload s
   else                                           failwith "Non-existent method" 
