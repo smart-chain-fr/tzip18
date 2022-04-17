@@ -134,5 +134,5 @@ type parameter =
   | Upgrade of ep_operation list * change_version option * address
 
 let main (p, s : parameter * storage) : operation list * storage = match p with
-  | Call p -> call_contract p s
-  | Upgrade      p -> upgrade       p s
+  | Call    p -> call_contract p s
+  | Upgrade p -> upgrade       p s
