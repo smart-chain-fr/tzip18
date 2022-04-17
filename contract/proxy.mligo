@@ -57,8 +57,6 @@ type storage = {
 (* =============================================================================
  * Entrypoint Functions
  * ============================================================================= *)
-
-
 // the proxy function 
 let call_contract (param : call_contract) (storage : storage) : operation list * storage = 
   
@@ -77,7 +75,6 @@ let call_contract (param : call_contract) (storage : storage) : operation list *
       } in
       Tezos.transaction call_param amt contract
   in
-  
   ([op_call_contract] : operation list), storage
 
 // the governance proxy contract can update entrypoints 
@@ -113,7 +110,6 @@ let upgrade (param : (ep_operation list * change_version option  * address)) (s 
       (Some(new_token_metadata_0n))
       s.token_metadata
   in
-  
 
   //Ask the old version put the new contract as master
   match change_version_opt with
