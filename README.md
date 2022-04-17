@@ -26,13 +26,13 @@ This proposal describes how to implement patterns for upgradeable contracts, pro
 
 1. Security : During the past several years, bugs and vulnerabilities in smart contracts caused millions of dollars to get stolen or lost forever. Such cases may even require manual intervention in blockchain operation to recover the funds. As a result, the community starts to acknowledge the need for upgradeable smart-contracts.
 
-2. Features : Having logic fixed at origination makes the contract somehow wobbly. To unleach the true potential of Tezos framework, this is an important question to answer.
+2. Adding features : Having logic fixed at origination makes the contract somehow wobbly. To unleach the true potential of Tezos framework, this is an important question to answer.
 
-3. No version management : Tzip18 automaticaly manages differents versions and contract interconnections.
+3. Version management : Tzip18 automaticaly manages differents versions and contract interconnections.
 
 4. Fixed entrypoints : Callees like light clients, wallet and explorer can call a same entrypoint again and again, totaly separating the logic from the address.
 
-5. Hot bug fixing : This proposal is convenient for fixing critical bugs or when a vulnerability is discovered in the contract's implementation, since a new version can quickly be released.
+5. Hot fixes : This proposal is convenient for fixing critical bugs or when a vulnerability is discovered in the contract's implementation, since a new version can quickly be released.
 
 ## Abstract
 
@@ -50,20 +50,3 @@ Thanks to address immutability, this mechanism facilitates pushing upgrades to a
 
 Administrator-forced upgrades are not applicable to some use-cases because they require a certain degree of trust in the person or organization that manages the contract. In that particular case, people using the token must vote on the contract upgrade, or the architecture presented here must be slightly modified. This proposal does not cover this case. The administration problem is in fact totaly independant from the TZIP18 proposal, so in this POC we will only present a basic governance of only one user. Of course in a real project, a governance smart-contract must be created.
 
-## Architecture
-```mermaid 
-graph TD
-    A[External user call] -->|Call| B{Proxy}
-    B -->|Redirect call| C[Version 1]
-```
-
-For the sake of simplicity, we imagine the governance is represented by Alice. The architecture is composed of what we call a "proxy" contract that will accept external calls and redirect them to "versions" or "slaves" contract.
-
-
-A contract which implements upgradable contracts must have the following entrypoints :
-
-* `(address :from, (address :to, nat :value))    %transfer`
-* `(address :spender, nat :value)                %approve`
-* `(view (address :owner, address :spender) nat) %getAllowance`
-* `(view (address :owner) nat)                   %getBalance`
-* `(view unit nat)                               %getTotalSupply`
