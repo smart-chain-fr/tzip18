@@ -208,7 +208,7 @@ let test_tzip18_should_work =
 
   let tx1 : test_exec_result = Test.transfer_to_contract
     contract_px
-    (CallContract(call_proxy_transfer))
+    (Call(call_proxy_transfer))
     0mutez
   in
   // let () =  Test.log (tx1) in
@@ -343,7 +343,7 @@ let test_tzip18_should_work =
 
   let tx3 : test_exec_result = Test.transfer_to_contract
     contract_px
-    (CallContract(call_proxy_transfer))
+    (Call(call_proxy_transfer))
     0mutez
   in
   let () =  Test.log (tx3) in

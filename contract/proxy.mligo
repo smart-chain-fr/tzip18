@@ -134,9 +134,9 @@ let upgrade (param : (ep_operation list * change_version option  * address)) (s 
     (([op_change] : operation list), {s with entrypoints = new_entrypoints ; token_metadata = new_token_metadata})
 
 type parameter = 
-  | CallContract of call_contract
-  | Upgrade      of ep_operation list * change_version option * address
+  | Call    of call_contract
+  | Upgrade of ep_operation list * change_version option * address
 
 let main (p, s : parameter * storage) : operation list * storage = match p with
-  | CallContract p -> call_contract p s
+  | Call p -> call_contract p s
   | Upgrade      p -> upgrade       p s
