@@ -1,9 +1,5 @@
 # TEZOS TZIP-018 : A2 - Upgradable Contracts
 
-## Summary
-
-TZIP-18 POC upgrade of a FA12 coin to a FA2 coin, with metadata update and an increase of precision x1000 in the decimals while remaining the same supply.
-
 ## Table Of Contents
 
 <!-- TOC -->
@@ -19,6 +15,8 @@ TZIP-18 POC upgrade of a FA12 coin to a FA2 coin, with metadata update and an in
 ## Summary
 
 TZIP-018 proposes a set of mechanisms for defining upgradeable contracts with fixed address. We describe how to define administrator-forced upgrades about the logic and user-defined upgrades about the data.
+
+We present here a POC as an upgrade of a FA12 coin to a FA2 coin, with metadata update and an increase of precision x1000 in the decimals while remaining the same supply.
 
 ## Motivation
 
