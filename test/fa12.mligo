@@ -30,10 +30,10 @@ let transfer (packed_param : bytes) (storage : storage) : operation list * stora
 
   // Check allowance amount
   let allowances =
-    if Tezos.source = param.address_from
+    if Tezos.get_source() = param.address_from
     then allowances
     else
-      let allowance_key = { owner = param.address_from ; spender = Tezos.sender } in
+      let allowance_key = { owner = param.address_from ; spender = Tezos.get_sender() } in
       let authorized_value =
         match Big_map.find_opt allowance_key allowances with
         | Some value -> value
@@ -75,7 +75,7 @@ let approve (packed_param : bytes) (storage : storage) : operation list * storag
     | Some a -> a
   in
   let allowances = storage.allowances in
-  let allowance_key = { owner = Tezos.sender ; spender = param.spender } in
+  let allowance_key = { owner = Tezos.get_sender() ; spender = param.spender } in
   let previous_value =
     match Big_map.find_opt allowance_key allowances with
     | Some value -> value
@@ -131,10 +131,10 @@ let main (p, s : parameter * storage) : operation list * storage =
   let is_next_version_call : bool = match s.tzip18.contract_next with 
     | None            -> False
     | Some (contract) ->
-      if ( Tezos.sender =  contract ) then True 
+      if ( Tezos.get_sender() =  contract ) then True 
       else False
   in
-  let _ = assert_with_error (Tezos.sender = s.tzip18.proxy || is_next_version_call)
+  let _ = assert_with_error (Tezos.get_sender() = s.tzip18.proxy || is_next_version_call)
     "Only the proxy or master can call this contract" in
   if      p.method = "transfer_V1"     then transfer       p.payload s
   else if p.method = "approve_V1"      then approve        p.payload s

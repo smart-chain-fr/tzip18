@@ -1,4 +1,4 @@
-#import "proxy.mligo"        "PX"
+#import "../src/main.mligo"        "PX"
 
 #import "fa12.mligo"         "F12"
 #import "fa12_types.mligo"   "F12T"

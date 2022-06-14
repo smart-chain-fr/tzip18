@@ -171,7 +171,7 @@ module Operators = struct
 
 (** if transfer policy is Owner_or_operator_transfer *)
   let assert_authorisation (operators : t) (from_ : address) : unit = 
-    let sender_ = Tezos.source in
+    let sender_ = Tezos.get_source() in
     if (sender_ = from_) then ()
     else 
     let authorized = match Big_map.find_opt from_ operators with
@@ -180,7 +180,7 @@ module Operators = struct
     else failwith "FA2_NOT_SENDER_NOR_OPERATOR"
 
    let assert_update_permission (owner : owner) : unit =
-      assert_with_error (owner = Tezos.sender) "The sender can only manage operators for his own token"
+      assert_with_error (owner = Tezos.get_sender()) "The sender can only manage operators for his own token"
 
    let add_operator (operators : t) (owner : owner) (operator : operator) : t =
       if owner = operator then operators (* assert_authorisation always allow the owner so this case is not relevant *)

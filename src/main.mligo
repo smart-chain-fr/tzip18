@@ -61,7 +61,7 @@ type storage = {
 let call_contract (param : call_contract) (storage : storage) : operation list * storage = 
   
   let op_call_contract : operation = 
-    let amt = Tezos.amount in 
+    let amt = Tezos.get_amount() in 
     let entry : ep = match Big_map.find_opt param.entrypoint_name storage.entrypoints with
       | None   -> (failwith "No entrypoint found" : ep)
       | Some a -> a in
@@ -79,7 +79,7 @@ let call_contract (param : call_contract) (storage : storage) : operation list *
 
 // the governance proxy contract can update entrypoints 
 let upgrade (param : (ep_operation list * change_version option  * address)) (s : storage) : operation list * storage = 
-  let () = assert_with_error (Tezos.sender = s.governance) "Permission denied" in
+  let () = assert_with_error (Tezos.get_sender() = s.governance) "Permission denied" in
   let (upgraded_ep_list, change_version_opt, new_metadata_address) : ep_operation list * change_version option * address = param in
   let rec update_storage ((l, m) : ep_operation list * (string, ep) big_map) : (string, ep) big_map =
     match l with
@@ -119,7 +119,7 @@ let upgrade (param : (ep_operation list * change_version option  * address)) (s 
       match (Tezos.get_contract_opt change.old : call_type contract option) with
     | None          -> (failwith "No contract found at this address" : operation)
     | Some contract -> 
-        let amt = Tezos.amount in 
+        let amt = Tezos.get_amount() in 
         let payload : address = change.new in
         let call_param : call_type = {
           method  = ("change_version" : string); 
