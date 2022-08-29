@@ -24,13 +24,13 @@ let () =  Test.log ("Dan   : ", dan)
 let () =  Test.log ("Eve   : ", eve)
 let () =  Test.log ("Frank : ", frank)
 
-// ===== FAILWITH HELPER =======
-let assert_string_failure (res : test_exec_result) (expected : string) : unit =
-  let expected = Test.eval expected in
-  match res with
-  | Fail (Rejected (actual,_)) -> assert (Test.michelson_equal actual expected)
-  | Fail (Other) -> failwith "contract failed for an unknown reason"
-  | Success _gas -> failwith "contract did not failed but was expected to fail"
+// // ===== FAILWITH HELPER =======
+// let assert_string_failure (res : test_exec_result) (expected : string) : unit =
+//   let expected = Test.eval expected in
+//   match res with
+//   | Fail (Rejected (actual,_)) -> assert (Test.michelson_equal actual expected)
+//   | Fail (Other) -> failwith "contract failed for an unknown reason"
+//   | Success _gas -> failwith "contract did not failed but was expected to fail"
 
 // ========== DEPLOY CONTRACT HELPER ============
 let originate (type s p) (storage: s) (main: (p * s) -> operation list * s) : (p,s) typed_address * p contract =
@@ -38,7 +38,7 @@ let originate (type s p) (storage: s) (main: (p * s) -> operation list * s) : (p
     typed_address, Test.to_contract typed_address
 let originate_ff (type s p) (file_path: string) (mainName : string) (views: string list) (storage: michelson_program) : 
   address * (p,s) typed_address * p contract =
-  let (address_contract, code_contract, _) = Test.originate_from_file file_path mainName views storage 0tez in
+  let (address_contract, _code_contract, _) = Test.originate_from_file file_path mainName views storage 0tez in
   let taddress_contract = (Test.cast_address address_contract : (p, s) typed_address) in
   address_contract, taddress_contract, Test.to_contract taddress_contract
 
@@ -72,7 +72,9 @@ let test_tzip18_should_work =
     ((0n : nat), token_metadata); 
   ] in
   let governance : address = alice in
-  let entrypoints : (string, PX.ep) big_map = Big_map.empty in
+
+  let entrypoints : (string, PX.ep) big_map = (Big_map.empty: (string, PX.ep) big_map) in
+
   let initial_storage_px = {
       governance = governance;
       entrypoints = entrypoints;
@@ -81,16 +83,13 @@ let test_tzip18_should_work =
   let initial_storage_lambda = Test.run (fun (x:PX.storage) -> x) initial_storage_px in
   let (address_px, typed_address_px, contract_px) : 
     address * (PX.parameter, PX.storage) typed_address * PX.parameter contract = 
-    originate_ff "contract/proxy.mligo" "main" ([] : string list) initial_storage_lambda
+    originate_ff "./proxy.mligo" "main" ([] : string list) initial_storage_lambda
   in
   let storage_px = Test.get_storage typed_address_px in
   let () = Test.log ("============", address_px, "============") in
   let () = Test.log ("=====================================================================") in
   let () = Test.log (storage_px.entrypoints) in
   let () = Test.log (storage_px.token_metadata) in
-
-
-
 
 
   let () = Test.log ("=====================================================================") in
@@ -123,7 +122,8 @@ let test_tzip18_should_work =
     ((0n : nat), token_metadata); 
   ] in
   let total_supply : nat = 2_000_000n in
-  let allowances : (F12T.allowance_key, nat) big_map = Big_map.empty in
+  let allowances : (F12T.allowance_key, nat) big_map = (Big_map.empty : (F12T.allowance_key, nat) big_map) in
+
   let ledger : (address, nat) big_map = Big_map.literal [ 
     ((bob : address), (total_supply : nat));
   ] in
@@ -136,9 +136,9 @@ let test_tzip18_should_work =
   } in
   let initial_storage_lambda = Test.run (fun (x:F12.storage) -> x) initial_storage_f12 in
   let view_list : string list = ["get_balance"; "get_metadata"] in
-  let (address_fa12, typed_address_f12, contract_f12) : 
+  let (address_fa12, typed_address_f12, _contract_f12) : 
     address * (bytes, F12.storage) typed_address * bytes contract = 
-    originate_ff "contract/fa12.mligo" "main" (view_list : string list) initial_storage_lambda in
+    originate_ff "./fa12.mligo" "main" (view_list : string list) initial_storage_lambda in
   let storage_fa12 = Test.get_storage typed_address_f12 in
   let () = Test.log ("============", address_fa12, "============") in
   let () = Test.log ("=====================================================================") in
@@ -206,12 +206,12 @@ let test_tzip18_should_work =
     payload         = Bytes.pack payload_transfer;
   } in
 
-  let tx1 : test_exec_result = Test.transfer_to_contract
+  let _tx1 : test_exec_result = Test.transfer_to_contract
     contract_px
     (Call(call_proxy_transfer))
     0mutez
   in
-  // let () =  Test.log (tx1) in
+  // let () =  Test.log (_tx1) in
   let storage_fa12 = Test.get_storage typed_address_f12 in
   let () = Test.log (storage_fa12) in
 
@@ -246,8 +246,8 @@ let test_tzip18_should_work =
     ((0n : nat), token_metadata); 
   ] in
   let total_supply : nat = 2_000_000_000n in
-  let operators : (F2T.Operators.owner, F2T.Operators.operator set) big_map = Big_map.empty in
-  let ledger : (address, nat) big_map = Big_map.empty in
+  let operators : (F2T.Operators.owner, F2T.Operators.operator set) big_map = (Big_map.empty : (F2T.Operators.owner, F2T.Operators.operator set) big_map) in
+  let ledger : (address, nat) big_map = (Big_map.empty : (address, nat) big_map) in
   let initial_storage_f2 = {
     tzip18 = tzip18;
     ledger = ledger;
@@ -257,9 +257,9 @@ let test_tzip18_should_work =
   } in
   let initial_storage_lambda = Test.run (fun (x:F2.storage) -> x) initial_storage_f2 in
   let view_list : string list = ["get_balance"; "get_metadata"] in
-  let (address_fa2, typed_address_f2, contract_f2) : 
+  let (address_fa2, typed_address_f2, _contract_f2) : 
     address * (F2.parameter, F2.storage) typed_address * F2.parameter contract = 
-    originate_ff "contract/fa2.mligo" "main" view_list initial_storage_lambda in
+    originate_ff "./fa2.mligo" "main" view_list initial_storage_lambda in
   let storage_fa2 = Test.get_storage typed_address_f2 in
   let () = Test.log ("============", address_fa2, "============") in
   let () = Test.log ("=====================================================================") in

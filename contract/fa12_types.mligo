@@ -5,7 +5,7 @@ type tzip18 = {
   contract_next : address option;
 }
 
-module Ledger  = struct
+module Ledger = struct
   type owner   = address
   type amount_ = nat
   type t = (owner, amount_) big_map

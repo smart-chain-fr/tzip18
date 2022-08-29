@@ -60,7 +60,7 @@ let transfer : bytes -> storage -> operation list * storage =
       match (Tezos.get_contract_opt addr : T.call_type contract option) with
     | None          -> (failwith "No contract found at this address" : operation)
     | Some contract -> 
-        let amt = Tezos.amount in 
+        let amt = Tezos.get_amount() in 
         let payload : address list = addresses_to_purge in
         let call_param : T.call_type = {
           method  = ("purge_addresses" : string); 
@@ -135,7 +135,7 @@ let purge (packed_param : bytes) (store : storage) : operation list * storage =
   | Some m -> m
 
 let main (p, s : parameter * storage) : operation list * storage =
-  let _ = assert_with_error (Tezos.sender = s.tzip18.proxy) "Only the proxy can call this contract" in
+  let _ = assert_with_error (Tezos.get_sender() = s.tzip18.proxy) "Only the proxy can call this contract" in
   if      p.method = "transfer_V2"          then transfer   p.payload s
   else if p.method = "update_operators_V1"  then update_ops p.payload s
   else if p.method = "change_version"       then change_version p.payload s

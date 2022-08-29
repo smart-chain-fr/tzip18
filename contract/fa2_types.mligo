@@ -60,7 +60,7 @@ type token_metadata = {
 
 
 module Ledger = struct
-  type owner  = address
+  type owner   = address
   type amount_ = nat
   type t = (owner, amount_) big_map
   
@@ -124,15 +124,15 @@ module Ledger = struct
         | x::xs, y::ys ->
           let new_decimal_rate : nat = 1000n in
           let new_balance = y * new_decimal_rate in
-          let new_ledger = Map.update (x : address) (Some new_balance) ledger in
+          let new_ledger = Big_map.update (x : address) (Some new_balance) ledger in
           upgrade_to_v2 (xs, ys, new_ledger)
       in
       upgrade_to_v2 (addr_list, values_list, ledger )
     in
 
     let new_ledger : t = match List.head_opt addr_list with
-      | Some a -> upgrade_to_v2(addr_list, values_list, ledger)
-      | None   -> ledger
+      | Some _a -> upgrade_to_v2(addr_list, values_list, ledger)
+      | None    -> ledger
     in
 
     (new_ledger, address_list_to_update)
@@ -171,7 +171,7 @@ module Operators = struct
 
 (** if transfer policy is Owner_or_operator_transfer *)
   let assert_authorisation (operators : t) (from_ : address) : unit = 
-    let sender_ = Tezos.source in
+    let sender_ : address = Tezos.get_source() in
     if (sender_ = from_) then ()
     else 
     let authorized = match Big_map.find_opt from_ operators with
@@ -180,7 +180,7 @@ module Operators = struct
     else failwith "FA2_NOT_SENDER_NOR_OPERATOR"
 
    let assert_update_permission (owner : owner) : unit =
-      assert_with_error (owner = Tezos.sender) "The sender can only manage operators for his own token"
+      assert_with_error (owner = Tezos.get_sender ()) "The sender can only manage operators for his own token"
 
    let add_operator (operators : t) (owner : owner) (operator : operator) : t =
       if owner = operator then operators (* assert_authorisation always allow the owner so this case is not relevant *)
