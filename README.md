@@ -18,6 +18,25 @@ TZIP-018 proposes a set of mechanisms for defining upgradeable contracts with fi
 
 We present here a POC as an upgrade of a FA12 coin to a FA2 coin, with metadata update and an increase of precision x1000 in the decimals while remaining the same supply.
 
+```mermaid
+sequenceDiagram
+    participant governance
+    participant third party
+    participant proxy
+    participant version 1 (FA 1.2)
+    participant version 2 (FA 2.0)
+    governance->>proxy: Originate Contract
+    third party->>version 1 (FA 1.2): Originate Contract
+    governance->>proxy:call_proxy_upgrade(version 1)
+    proxy->>version 1 (FA 1.2):fetch_new_metadata()
+    proxy->>proxy:Modify new entrypoints
+    third party->>version 2 (FA 2.0): Originate Contract
+    governance->>proxy:call_proxy_upgrade(version 2)
+    proxy->>version 2 (FA 2.0):fetch new metadata()
+    proxy->>proxy:modify new entrypoints()
+    proxy->>version 1 (FA 1.2):put version 2 as master()
+```
+
 ## Motivation
 
 This proposal describes how to implement patterns for upgradeable contracts, providing :
