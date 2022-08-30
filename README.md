@@ -29,7 +29,7 @@ Any version upgrade is a new contract that must be originated first and must con
 
 ```mermaid
 sequenceDiagram
-    autonumber  
+    autonumber
     actor governance
     actor third party
     participant proxy
