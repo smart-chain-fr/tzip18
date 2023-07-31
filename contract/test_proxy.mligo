@@ -34,7 +34,7 @@ let () =  Test.log ("Frank : ", frank)
 
 // ========== DEPLOY CONTRACT HELPER ============
 let originate (type s p) (storage: s) (main: (p * s) -> operation list * s) : (p,s) typed_address * p contract =
-    let (typed_address, _, _) = Test.originate main storage 0tez in
+    let (typed_address, _, _) = Test.originate_uncurried main storage 0tez in
     typed_address, Test.to_contract typed_address
 let originate_ff (type s p) (file_path: string) (mainName : string) (views: string list) (storage: michelson_program) : 
   address * (p,s) typed_address * p contract =
