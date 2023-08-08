@@ -1,12 +1,12 @@
-#import "proxy.mligo"        "PX"
+#import "../src/proxy.mligo"        "PX"
 
-#import "fa12.mligo"         "F12"
-#import "fa12_types.mligo"   "F12T"
-#import "fa12_storage.mligo" "F12S"
+#import "../src/fa12.mligo"         "F12"
+#import "../src/fa12_types.mligo"   "F12T"
+#import "../src/fa12_storage.mligo" "F12S"
 
-#import "fa2.mligo"          "F2"
-#import "fa2_types.mligo"    "F2T"
-#import "fa2_storage.mligo"  "F2S"
+#import "../src/fa2.mligo"          "F2"
+#import "../src/fa2_types.mligo"    "F2T"
+#import "../src/fa2_storage.mligo"  "F2S"
 
 // ===== SIGNERS =====
 let () = Test.reset_state 6n ([] : tez list)
@@ -36,7 +36,7 @@ let () =  Test.log ("Frank : ", frank)
 let originate (type s p) (storage: s) (main: (p * s) -> operation list * s) : (p,s) typed_address * p contract =
     let (typed_address, _, _) = Test.originate_uncurried main storage 0tez in
     typed_address, Test.to_contract typed_address
-let originate_ff (type s p) (file_path: string) (mainName : string) (views: string list) (storage: michelson_program) : 
+let originate_ff (type s p) (file_path: string) (mainName : string) (views: string list) (storage: michelson_program) :
   address * (p,s) typed_address * p contract =
   let (address_contract, _code_contract, _) = Test.originate_from_file file_path mainName views storage 0tez in
   let taddress_contract = (Test.cast_address address_contract : (p, s) typed_address) in
@@ -52,7 +52,7 @@ let test_tzip18_should_work =
   let () = Test.log ("== PROXY CONTRACT ORIGINATED with Alice as gouvernance ==============") in
   let () = Test.log ("=====================================================================") in
   let () = Test.set_source alice in
-  let token_info : (string, bytes) map = Map.literal [ 
+  let token_info : (string, bytes) map = Map.literal [
     ("name" : string)       , (Bytes.pack "Upgradable token");
     ("decimals" : string)   , (Bytes.pack "3");
     ("symbol" : string)     , (Bytes.pack "UT");
@@ -68,8 +68,8 @@ let test_tzip18_should_work =
     token_id = 0n;
     token_info = token_info;
   } in
-  let metadata = Big_map.literal [ 
-    ((0n : nat), token_metadata); 
+  let metadata = Big_map.literal [
+    ((0n : nat), token_metadata);
   ] in
   let governance : address = alice in
 
@@ -81,9 +81,9 @@ let test_tzip18_should_work =
       token_metadata = metadata;
   } in
   let initial_storage_lambda = Test.run (fun (x:PX.storage) -> x) initial_storage_px in
-  let (address_px, typed_address_px, contract_px) : 
-    address * (PX.parameter, PX.storage) typed_address * PX.parameter contract = 
-    originate_ff "./proxy.mligo" "main" ([] : string list) initial_storage_lambda
+  let (address_px, typed_address_px, contract_px) :
+    address * (PX.parameter, PX.storage) typed_address * PX.parameter contract =
+    originate_ff "../src/proxy.mligo" "main" ([] : string list) initial_storage_lambda
   in
   let storage_px = Test.get_storage typed_address_px in
   let () = Test.log ("============", address_px, "============") in
@@ -102,7 +102,7 @@ let test_tzip18_should_work =
     contract_prev   = (None : address option);
     contract_next   = (None : address option);
   } in
-  let token_info : (string, bytes) map = Map.literal [ 
+  let token_info : (string, bytes) map = Map.literal [
     ("name" : string)       , (Bytes.pack "Upgradable token");
     ("decimals" : string)   , (Bytes.pack "3");
     ("symbol" : string)     , (Bytes.pack "UT");
@@ -118,13 +118,13 @@ let test_tzip18_should_work =
     token_id = 0n;
     token_info = token_info;
   } in
-  let metadata = Big_map.literal [ 
-    ((0n : nat), token_metadata); 
+  let metadata = Big_map.literal [
+    ((0n : nat), token_metadata);
   ] in
   let total_supply : nat = 2_000_000n in
   let allowances : (F12T.allowance_key, nat) big_map = (Big_map.empty : (F12T.allowance_key, nat) big_map) in
 
-  let ledger : (address, nat) big_map = Big_map.literal [ 
+  let ledger : (address, nat) big_map = Big_map.literal [
     ((bob : address), (total_supply : nat));
   ] in
   let initial_storage_f12 = {
@@ -136,9 +136,9 @@ let test_tzip18_should_work =
   } in
   let initial_storage_lambda = Test.run (fun (x:F12.storage) -> x) initial_storage_f12 in
   let view_list : string list = ["get_balance"; "get_metadata"] in
-  let (address_fa12, typed_address_f12, _contract_f12) : 
-    address * (bytes, F12.storage) typed_address * bytes contract = 
-    originate_ff "./fa12.mligo" "main" (view_list : string list) initial_storage_lambda in
+  let (address_fa12, typed_address_f12, _contract_f12) :
+    address * (bytes, F12.storage) typed_address * bytes contract =
+    originate_ff "../src/fa12.mligo" "main" (view_list : string list) initial_storage_lambda in
   let storage_fa12 = Test.get_storage typed_address_f12 in
   let () = Test.log ("============", address_fa12, "============") in
   let () = Test.log ("=====================================================================") in
@@ -174,7 +174,7 @@ let test_tzip18_should_work =
   } in
 
   let no_version_list : PX.change_version option = (None : PX.change_version option) in
-  
+
   let op_list : PX.ep_operation list = [op_transfer; op_approve] in
   let addr_slave    : address = address_fa12 in
   let call_proxy_upgrade : PX.ep_operation list * PX.change_version option * address = (op_list, no_version_list, addr_slave) in
@@ -202,7 +202,7 @@ let test_tzip18_should_work =
     value        = 500_000n;
   } in
   let call_proxy_transfer : PX.call_contract = {
-    entrypoint_name = ("transfer" : string); 
+    entrypoint_name = ("transfer" : string);
     payload         = Bytes.pack payload_transfer;
   } in
 
@@ -227,7 +227,7 @@ let test_tzip18_should_work =
     version         = (2n : nat);
     contract_next   = (None : address option);
   } in
-  let token_info : (string, bytes) map = Map.literal [ 
+  let token_info : (string, bytes) map = Map.literal [
     ("name" : string)       , (Bytes.pack "Upgradable token V2");
     ("decimals" : string)   , (Bytes.pack "6");
     ("symbol" : string)     , (Bytes.pack "UT2");
@@ -242,8 +242,8 @@ let test_tzip18_should_work =
     token_id = 0n;
     token_info = token_info;
   } in
-  let metadata = Big_map.literal [ 
-    ((0n : nat), token_metadata); 
+  let metadata = Big_map.literal [
+    ((0n : nat), token_metadata);
   ] in
   let total_supply : nat = 2_000_000_000n in
   let operators : (F2T.Operators.owner, F2T.Operators.operator set) big_map = (Big_map.empty : (F2T.Operators.owner, F2T.Operators.operator set) big_map) in
@@ -257,9 +257,9 @@ let test_tzip18_should_work =
   } in
   let initial_storage_lambda = Test.run (fun (x:F2.storage) -> x) initial_storage_f2 in
   let view_list : string list = ["get_balance"; "get_metadata"] in
-  let (address_fa2, typed_address_f2, _contract_f2) : 
-    address * (F2.parameter, F2.storage) typed_address * F2.parameter contract = 
-    originate_ff "./fa2.mligo" "main" view_list initial_storage_lambda in
+  let (address_fa2, typed_address_f2, _contract_f2) :
+    address * (F2.parameter, F2.storage) typed_address * F2.parameter contract =
+    originate_ff "../src/fa2.mligo" "main" view_list initial_storage_lambda in
   let storage_fa2 = Test.get_storage typed_address_f2 in
   let () = Test.log ("============", address_fa2, "============") in
   let () = Test.log ("=====================================================================") in
@@ -337,7 +337,7 @@ let test_tzip18_should_work =
   let payload_transfer : F2T.transfer_from list = [transfer_simple] in
 
   let call_proxy_transfer : PX.call_contract = {
-    entrypoint_name = ("transfer" : string); 
+    entrypoint_name = ("transfer" : string);
     payload         = Bytes.pack payload_transfer;
   } in
 
@@ -353,7 +353,7 @@ let test_tzip18_should_work =
 
   let storage_fa12 = Test.get_storage typed_address_f12 in
   let () = Test.log (storage_fa12) in
-  
+
   "OK"
 
 
