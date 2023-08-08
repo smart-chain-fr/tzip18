@@ -1,3 +1,6 @@
-node_modules/
-venv/
-.idea/
+_esy/
+.DS_Store
+.ligo/
+*.log
+*.tz
+compiled/*
